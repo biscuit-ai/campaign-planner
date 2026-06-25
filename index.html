@@ -348,7 +348,23 @@
 
   function phClass(t) { return ['ph1','ph2','ph3','ph4','ph5'][parseInt(t)-1] || 'ph1'; }
   function setDur(btn, val) { document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); dur = val; }
-  function addCast() { const l = document.getElementById('castList'); const r = document.createElement('div'); r.className = 'cast-row'; r.innerHTML = '<input type="text" placeholder="Nama pemain" /><button class="rm" onclick="removeCast(this)" type="button">×</button>'; l.appendChild(r); }
+  function addCast() {
+    const l = document.getElementById('castList');
+    const r = document.createElement('div');
+    r.className = 'cast-row';
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.placeholder = 'Nama pemain';
+    const rmBtn = document.createElement('button');
+    rmBtn.className = 'rm';
+    rmBtn.type = 'button';
+    rmBtn.textContent = '×';
+    rmBtn.addEventListener('click', function() { removeCast(this); });
+    r.appendChild(inp);
+    r.appendChild(rmBtn);
+    l.appendChild(r);
+    inp.focus();
+  }
   function removeCast(btn) { if (document.querySelectorAll('.cast-row').length > 1) btn.parentElement.remove(); }
   function copyText(btn, text) { navigator.clipboard.writeText(text).then(() => { btn.classList.add('copied'); btn.textContent = '✓ Copied'; setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'Copy'; }, 1600); }); }
 
