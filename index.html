@@ -378,15 +378,56 @@
 
     const filmInfo = `JUDUL: ${title} | GENRE: ${genre} | TAYANG: ${relFmt} | PEMAIN: ${cast.length ? cast.join(', ') : '-'} | DURASI KAMPANYE: ${dur}`;
 
-    // Call 1: Struktur (overview + phases + calendar) - JSON pendek, aman
-    const promptStruktur = `Social media strategist film Indonesia. Data film: ${filmInfo}. Sinopsis: ${synopsis}
+    // Call 1: Struktur — JSON bersih tanpa contoh template
+    const promptStruktur = `Kamu adalah social media strategist film Indonesia. Jawab HANYA dengan JSON valid, tanpa penjelasan, tanpa markdown.
 
-BALAS HANYA JSON. Buat 5 fase kampanye dan 7 minggu kalender.
-{"overview":{"totalPosts":28,"platforms":["Instagram","TikTok","X/Twitter","YouTube"],"phases":5,"targetAudience":"remaja dewasa 17-30 tahun"},"phases":[{"name":"Awareness","period":"4 minggu sebelum","goal":"bangun pengenalan film","type":"1"},{"name":"Excitement","period":"3 minggu sebelum","goal":"tingkatkan antusiasme","type":"2"},{"name":"Engagement","period":"2 minggu sebelum","goal":"interaksi audiens","type":"3"},{"name":"Pre-Launch","period":"1 minggu sebelum","goal":"dorong pembelian tiket","type":"4"},{"name":"Launch","period":"minggu tayang","goal":"maksimalkan penonton","type":"5"}],"calendar":[{"week":"Minggu 1","phase":"Awareness","phaseType":"1","theme":"Perkenalan karakter","monday":"Post foto poster","wednesday":"Quote karakter","friday":"Behind the scenes","saturday":"Poll Instagram story","platforms":["Instagram","TikTok"]},{"week":"Minggu 2","phase":"Awareness","phaseType":"1","theme":"Teaser storyline","monday":"Video teaser 15 detik","wednesday":"Thread X misteri","friday":"TikTok challenge launch","saturday":"Countdown story","platforms":["TikTok","X/Twitter"]},{"week":"Minggu 3","phase":"Excitement","phaseType":"2","theme":"Trailer resmi","monday":"Drop trailer resmi","wednesday":"Reaksi pemain","friday":"Fan art contest","saturday":"Live IG pemain","platforms":["Instagram","YouTube"]},{"week":"Minggu 4","phase":"Engagement","phaseType":"3","theme":"Interaksi fans","monday":"Q&A karakter","wednesday":"Tebak adegan","friday":"UGC showcase","saturday":"Hitung mundur","platforms":["Instagram","TikTok"]},{"week":"Minggu 5","phase":"Pre-Launch","phaseType":"4","theme":"Tiket tersedia","monday":"Link tiket buka","wednesday":"Review media","friday":"Red carpet content","saturday":"Final push story","platforms":["Instagram","X/Twitter"]},{"week":"Minggu 6","phase":"Launch","phaseType":"5","theme":"Hari tayang","monday":"Post hari pertama","wednesday":"Testimonial penonton","friday":"Box office update","saturday":"Terima kasih fans","platforms":["Instagram","TikTok","YouTube"]},{"week":"Minggu 7","phase":"Launch","phaseType":"5","theme":"Momentum tayang","monday":"Momen viral","wednesday":"Pencapaian penonton","friday":"Perpanjangan tayang","saturday":"Wrap up campaign","platforms":["Instagram","YouTube"]}]}
+Film: ${filmInfo}
+Sinopsis: ${synopsis}
 
-Sesuaikan konten di atas dengan data film yang diberikan. Balas hanya JSON.`;
+Buat campaign plan dengan struktur JSON ini:
+{
+  "overview": {
+    "totalPosts": [angka total konten],
+    "platforms": ["Instagram","TikTok","X/Twitter","YouTube"],
+    "phases": 5,
+    "targetAudience": "[deskripsi target penonton, maks 5 kata]"
+  },
+  "phases": [
+    { "name": "[nama fase, maks 2 kata]", "period": "[waktu, cth: 4 minggu sebelum tayang]", "goal": "[tujuan, maks 8 kata]", "type": "1" },
+    { "name": "[nama fase]", "period": "[waktu]", "goal": "[tujuan]", "type": "2" },
+    { "name": "[nama fase]", "period": "[waktu]", "goal": "[tujuan]", "type": "3" },
+    { "name": "[nama fase]", "period": "[waktu]", "goal": "[tujuan]", "type": "4" },
+    { "name": "[nama fase]", "period": "[waktu]", "goal": "[tujuan]", "type": "5" }
+  ],
+  "calendar": [
+    { "week": "Minggu 1", "phase": "[nama fase]", "phaseType": "1", "theme": "[tema, maks 5 kata]", "monday": "[konten, maks 6 kata]", "wednesday": "[konten, maks 6 kata]", "friday": "[konten, maks 6 kata]", "saturday": "[konten, maks 6 kata]", "platforms": ["Instagram"] },
+    { "week": "Minggu 2", "phase": "[nama fase]", "phaseType": "1", "theme": "[tema]", "monday": "[konten]", "wednesday": "[konten]", "friday": "[konten]", "saturday": "[konten]", "platforms": ["TikTok"] },
+    { "week": "Minggu 3", "phase": "[nama fase]", "phaseType": "2", "theme": "[tema]", "monday": "[konten]", "wednesday": "[konten]", "friday": "[konten]", "saturday": "[konten]", "platforms": ["Instagram","YouTube"] },
+    { "week": "Minggu 4", "phase": "[nama fase]", "phaseType": "3", "theme": "[tema]", "monday": "[konten]", "wednesday": "[konten]", "friday": "[konten]", "saturday": "[konten]", "platforms": ["TikTok","X/Twitter"] },
+    { "week": "Minggu 5", "phase": "[nama fase]", "phaseType": "4", "theme": "[tema]", "monday": "[konten]", "wednesday": "[konten]", "friday": "[konten]", "saturday": "[konten]", "platforms": ["Instagram"] },
+    { "week": "Minggu 6", "phase": "[nama fase]", "phaseType": "5", "theme": "[tema]", "monday": "[konten]", "wednesday": "[konten]", "friday": "[konten]", "saturday": "[konten]", "platforms": ["Instagram","TikTok"] },
+    { "week": "Minggu 7", "phase": "[nama fase]", "phaseType": "5", "theme": "[tema]", "monday": "[konten]", "wednesday": "[konten]", "friday": "[konten]", "saturday": "[konten]", "platforms": ["YouTube"] }
+  ]
+}
 
-    // Call 2: Caption per platform - plain text, tidak bisa corrupt
+Isi semua [placeholder] dengan konten spesifik untuk film ini. Balas hanya JSON.`;
+
+    // Call 2: Tips — JSON kecil terpisah
+    const promptTips = `Social media strategist film Indonesia. Film: ${filmInfo}.
+
+Jawab HANYA JSON valid ini:
+{
+  "tipsBoxOffice": [
+    { "icon": "🎯", "title": "[judul tip]", "desc": "[penjelasan singkat maks 15 kata]" },
+    { "icon": "📱", "title": "[judul tip]", "desc": "[penjelasan singkat maks 15 kata]" },
+    { "icon": "🤝", "title": "[judul tip]", "desc": "[penjelasan singkat maks 15 kata]" },
+    { "icon": "🎟️", "title": "[judul tip]", "desc": "[penjelasan singkat maks 15 kata]" }
+  ]
+}
+
+Isi dengan tips spesifik untuk genre ${genre}. Balas hanya JSON.`;
+
+        // Call 3: Caption — plain text, anti-corrupt
     const promptCaption = `Social media copywriter film Indonesia. Data: ${filmInfo}. Sinopsis: ${synopsis}
 
 Tulis 6 caption siap posting dalam Bahasa Indonesia yang engaging. Format PERSIS seperti ini:
@@ -435,8 +476,7 @@ FASE: Launch
 
 Tulis caption yang spesifik untuk film ini, kreatif, dan sesuai karakter masing-masing platform.`;
 
-    // Call 3: Tips Box Office - JSON sangat pendek
-    const promptTips = `Content strategist film Indonesia. Film: ${filmInfo}.
+ = `Content strategist film Indonesia. Film: ${filmInfo}.
 
 BALAS HANYA JSON 4 tips Box Office:
 {"tipsBoxOffice":[{"icon":"🎯","title":"Maksimalkan Opening Weekend","desc":"Fokus semua effort di 3 hari pertama tayang karena menentukan perpanjangan jadwal bioskop"},{"icon":"📱","title":"TikTok Organic Viral","desc":"Buat challenge atau sound original yang mudah ditiru penonton untuk efek snowball organik"},{"icon":"🤝","title":"Kolaborasi Micro Influencer","desc":"10 micro influencer lebih efektif dari 1 mega influencer untuk jangkauan komunitas lokal"},{"icon":"🎟️","title":"Group Booking Campaign","desc":"Dorong nonton bareng komunitas dengan diskon group untuk isi kursi di hari weekday"}]}
@@ -449,7 +489,7 @@ Sesuaikan tips dengan genre dan target film di atas.`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 2500,
+          max_tokens: 2000,
           messages: [{ role: 'user', content: prompt }]
         })
       });
@@ -491,11 +531,33 @@ Sesuaikan tips dengan genre dan target film di atas.`;
       clearInterval(iv);
       for (let i = 0; i < 5; i++) document.getElementById('s'+i).className = 'step-dot done';
 
-      const struktur = JSON.parse(resStruktur.replace(/```json|```/g, '').trim());
-      const tips = JSON.parse(resTips.replace(/```json|```/g, '').trim());
-      const captions = parseCaption(resCaption);
+      // Parse struktur dengan safe fallback
+      let struktur = {};
+      try {
+        const rawStr = resStruktur.replace(/```json|```/g, '').trim();
+        // Extract JSON object from response
+        const jsonMatch = rawStr.match(/\{[\s\S]*\}/);
+        struktur = JSON.parse(jsonMatch ? jsonMatch[0] : rawStr);
+      } catch(e1) { console.error('Struktur parse fail:', e1.message, resStruktur.substring(0,200)); }
 
-      plan = { ...struktur, captions, tipsBoxOffice: tips.tipsBoxOffice };
+      // Parse tips dengan safe fallback
+      let tipsData = { tipsBoxOffice: [] };
+      try {
+        const rawTips = resTips.replace(/```json|```/g, '').trim();
+        const jsonMatch = rawTips.match(/\{[\s\S]*\}/);
+        tipsData = JSON.parse(jsonMatch ? jsonMatch[0] : rawTips);
+      } catch(e2) { console.error('Tips parse fail:', e2.message, resTips.substring(0,200)); }
+
+      const captions = parseCaption(resCaption);
+      if (!captions.length) console.error('Caption parse fail, raw:', resCaption.substring(0,300));
+
+      plan = {
+        overview: struktur.overview || { totalPosts: 28, platforms: ['Instagram','TikTok','X/Twitter','YouTube'], phases: 5, targetAudience: 'Penonton film Indonesia' },
+        phases: struktur.phases || [],
+        calendar: struktur.calendar || [],
+        captions,
+        tipsBoxOffice: tipsData.tipsBoxOffice || []
+      };
 
       document.getElementById('loadingSection').style.display = 'none';
       renderResults(plan);
