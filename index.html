@@ -673,7 +673,7 @@ async function generate() {
       const exPhase = getPhase(d1);
       const prompt = 'Content planner film: ' + film + '. ' + (isOTT ? 'OTT streaming — tone santai, dorong nonton di rumah sekarang.' : 'Bioskop — tone hype/FOMO, dorong beli tiket.') + '\n'
         + 'Buat jadwal H' + d1 + ' sampai H' + d2 + '. Tiap hari 2 item beda platform.\n'
-        + 'Treatment harus spesifik & viral: Hook/teaser, Meme/relatable, BTS, Teori, Countdown, atau Pop-culture angle. Tone: ' + toneCtx.substring(0,50) + '.\n'
+        + 'Treatment wajib actionable & spesifik: jelaskan APA yang dibuat, BAGAIMANA eksekusinya, dan TUJUANNYA. Contoh treatment bagus: "Video 10 detik cast utama duduk diam di lokasi ikonik film, caption hanya ??? — bikin penonton tebak lokasi". Bukan hanya "video tentang film". Tone: ' + toneCtx.substring(0,50) + '.\n'
         + 'Format SINGKAT — jawab HANYA JSON array:\n'
         + '[{"d":' + d1 + ',"p":"' + exPhase + '","a":{"pl":"TikTok","t":"Video","ti":"[judul 4 kata]","tr":"[brief 6 kata]"},"b":{"pl":"Instagram","t":"Carousel","ti":"[judul 4 kata]","tr":"[brief 6 kata]"}}]\n'
         + 'Lanjutkan sampai d=' + d2 + '. Variasikan platform (Instagram/TikTok/X/YouTube) dan type (Video/Carousel/Story/Reels/Thread). Sesuaikan fase: ' + getPhase(d1) + ' ke ' + getPhase(d2) + '. JSON only.';
@@ -697,13 +697,35 @@ async function generate() {
         });
       } catch(e) {
         console.warn('Chunk H' + d1 + '-' + d2 + ' parse fail:', e.message);
-        // Fallback: generate placeholder days
+        // Smart fallback berdasarkan fase
+        const fallbackTemplates = {
+          'Awareness': [
+            { platform: 'TikTok',    type: 'Video',    title: 'Cryptic Teaser Drop', treatment: 'Video 5-10 detik tanpa dialog — hanya musik/sound design film + judul muncul perlahan. Caption: angka atau kalimat misterius. Tujuan: bikin orang penasaran "film apa ini?"' },
+            { platform: 'Instagram', type: 'Carousel', title: 'Stills Sinematik',    treatment: '3-5 foto behind-the-scenes atau still frame dengan color grading khas film. Tanpa wajah aktor di slide pertama. Caption pendek, estetik. Tujuan: bangun visual identity film.' }
+          ],
+          'Excitement': [
+            { platform: 'TikTok',    type: 'Reels',    title: 'Trailer Reaction',  treatment: 'Kompilasi reaksi orang pertama kali nonton trailer — ekspresi kaget, ngeri, atau haru. Tambahkan teks "Kalian siap?" di akhir. Tujuan: social proof bahwa film ini layak ditonton.' },
+            { platform: 'Instagram', type: 'Carousel', title: 'Character Breakdown', treatment: 'Carousel memperkenalkan karakter utama satu per satu — foto karakter, nama, motivasi singkat. Desain konsisten dengan palet warna film. Tujuan: bangun attachment penonton ke karakter.' }
+          ],
+          'Pre-Launch': [
+            { platform: 'TikTok',    type: 'Video',    title: 'Countdown Cast',    treatment: 'Video pendek cast utama bilang "X hari lagi" sambil in-character atau di lokasi syuting. Edit cepat, energik. Tujuan: FOMO, ingatkan bahwa tanggal rilis sudah dekat.' },
+            { platform: 'Instagram', type: 'Story',    title: 'Tiket Sekarang',    treatment: 'Story dengan countdown timer + link langsung ke halaman pembelian tiket/platform streaming. Desain bold, warna kontras. CTA jelas: "Pesan sekarang sebelum kehabisan". Tujuan: konversi.' }
+          ],
+          'Launch': [
+            { platform: 'TikTok',    type: 'Video',    title: 'Sedang Tayang',     treatment: 'Potongan adegan paling intens tanpa spoiler besar (maks 15 detik) + teks "SEDANG TAYANG". Tag lokasi bioskop terdekat atau link platform streaming di bio. Tujuan: push penonton langsung action.' },
+            { platform: 'Instagram', type: 'Carousel', title: 'Respons Penonton',  treatment: 'Screenshot/repost komentar dan review positif penonton pertama. Tampilkan angka penonton jika ada. Caption: "Mereka sudah nonton. Kapan giliranmu?" Tujuan: social proof untuk gelombang penonton kedua.' }
+          ]
+        };
         for (let dd = d1; dd <= d2; dd++) {
+          const phase = getPhase(dd);
+          const tmpl = fallbackTemplates[phase] || fallbackTemplates['Awareness'];
           allDays.push({
-            day: dd, date: 'D-' + (days - dd + 1), phase: getPhase(dd),
+            day: dd,
+            date: 'D-' + (days - dd + 1),
+            phase,
             items: [
-              { platform: 'TikTok', type: 'Video', title: 'Konten hari ke-' + dd, treatment: 'Konten spesifik film' },
-              { platform: 'Instagram', type: 'Carousel', title: 'Post hari ke-' + dd, treatment: 'Konten spesifik film' }
+              { platform: tmpl[0].platform, type: tmpl[0].type, title: tmpl[0].title + ' (H' + dd + ')', treatment: tmpl[0].treatment },
+              { platform: tmpl[1].platform, type: tmpl[1].type, title: tmpl[1].title + ' (H' + dd + ')', treatment: tmpl[1].treatment }
             ]
           });
         }
