@@ -8,7 +8,22 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+  // Attach all event listeners (CSP-safe)
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add cast button
+    document.getElementById('addCastBtn').addEventListener('click', addCast);
+    // Generate button
+    document.getElementById('genBtn').addEventListener('click', generate);
+    // Duration buttons
+    document.querySelectorAll('.dur-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { setDur(this, this.dataset.dur); });
+    });
+    // First cast row remove button
+    var firstRm = document.querySelector('.cast-row .rm');
+    if (firstRm) firstRm.addEventListener('click', function() { removeCast(this); });
+  });
+</script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -286,21 +301,21 @@
         <div id="castList">
           <div class="cast-row">
             <input type="text" placeholder="Nama pemain, misal: Abun Sungkar" />
-            <button class="rm" onclick="removeCast(this)" type="button">×</button>
+            <button class="rm" type="button">×</button>
           </div>
         </div>
-        <button class="add-cast-btn" onclick="addCast()" type="button">+ Tambah pemain</button>
+        <button class="add-cast-btn" id="addCastBtn" type="button">+ Tambah pemain</button>
       </div>
       <div class="fg full">
         <label>Durasi Kampanye</label>
         <div class="dur-group">
-          <button class="dur-btn active" onclick="setDur(this,'1 bulan')" type="button">1 Bulan</button>
-          <button class="dur-btn" onclick="setDur(this,'2 bulan')" type="button">2 Bulan</button>
+          <button class="dur-btn active" data-dur="1 bulan" type="button">1 Bulan</button>
+          <button class="dur-btn" data-dur="2 bulan" type="button">2 Bulan</button>
         </div>
       </div>
     </div>
     <div class="err" id="errMsg">Harap lengkapi judul, tanggal tayang, genre, dan sinopsis.</div>
-    <button class="gen-btn" id="genBtn" onclick="generate()" type="button">✦ Generate Campaign Plan</button>
+    <button class="gen-btn" id="genBtn" type="button">✦ Generate Campaign Plan</button>
   </div>
 
   <div id="loadingSection">
@@ -479,8 +494,7 @@ FASE: Launch
         const end = block.indexOf('===END===');
         if (end === -1) continue;
         const inner = block.substring(0, end).trim();
-        const lines = inner.split('
-');
+        const lines = inner.split('\n');
         let platform = '', title = '', phase = '', captionLines = [];
         let inCaption = false;
         for (const line of lines) {
@@ -489,8 +503,7 @@ FASE: Launch
           else if (line.startsWith('FASE:')) { phase = line.replace('FASE:', '').trim(); inCaption = true; }
           else if (inCaption && line.trim()) captionLines.push(line);
         }
-        if (platform && title) captions.push({ platform, title, phase, caption: captionLines.join('
-').trim() });
+        if (platform && title) captions.push({ platform, title, phase, caption: captionLines.join('\n').trim() });
       }
       return captions;
     };
@@ -569,7 +582,7 @@ FASE: Launch
       <div class="captions-list">${captions}</div>
       <div class="rlabel">Tips Box Office</div>
       <div class="tips-grid">${tips}</div>
-      <div class="reset-row"><button class="exp-btn ghost" onclick="resetApp()">← Buat kampanye baru</button></div>`;
+      <div class="reset-row"><button class="exp-btn ghost" id="resetBtn">← Buat kampanye baru</button></div>`;
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -633,6 +646,21 @@ FASE: Launch
   }
 
   function resetApp() { document.getElementById('resultsSection').style.display='none'; document.getElementById('resultsSection').innerHTML=''; document.getElementById('formSection').style.display='block'; plan=null; window.scrollTo({top:0,behavior:'smooth'}); }
+
+  // Attach all event listeners (CSP-safe)
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add cast button
+    document.getElementById('addCastBtn').addEventListener('click', addCast);
+    // Generate button
+    document.getElementById('genBtn').addEventListener('click', generate);
+    // Duration buttons
+    document.querySelectorAll('.dur-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { setDur(this, this.dataset.dur); });
+    });
+    // First cast row remove button
+    var firstRm = document.querySelector('.cast-row .rm');
+    if (firstRm) firstRm.addEventListener('click', function() { removeCast(this); });
+  });
 </script>
 </body>
 </html>
