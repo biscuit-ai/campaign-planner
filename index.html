@@ -326,8 +326,8 @@
 <script>
   // ⚠️ GANTI INI dengan URL Cloudflare Worker kamu setelah deploy
   // Contoh: https://campaign-proxy.biscuit-ai.workers.dev
-const WORKER_URL = 'https://campaign-plannergr.emilkwikku001.workers.dev';
- 
+  const WORKER_URL = 'https://campaign-proxy.biscuit-ai.workers.dev';
+
   let dur = '1 bulan';
   let plan = null;
   let meta = {};
@@ -401,7 +401,7 @@ Buat 5 fase kampanye, 6-8 entri kalender, 6 caption siap posting (bervariasi pla
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 4000,
+          max_tokens: 8000,
           messages: [{ role: 'user', content: prompt }]
         })
       });
@@ -409,8 +409,24 @@ Buat 5 fase kampanye, 6-8 entri kalender, 6 caption siap posting (bervariasi pla
       for (let i = 0; i < 5; i++) document.getElementById('s'+i).className = 'step-dot done';
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      const raw = data.content.map(b => b.text || '').join('');
-      plan = JSON.parse(raw.replace(/```json|```/g, '').trim());
+      let raw = data.content.map(b => b.text || '').join('');
+      raw = raw.replace(/```json|```/g, '').trim();
+      // Repair truncated JSON — find last complete top-level key and close the object
+      try {
+        plan = JSON.parse(raw);
+      } catch(parseErr) {
+        // Try to salvage by closing unclosed JSON structures
+        let fixed = raw;
+        // Close any open arrays/objects greedily
+        const opens = (fixed.match(/\[/g)||[]).length - (fixed.match(/\]/g)||[]).length;
+        const openObj = (fixed.match(/\{/g)||[]).length - (fixed.match(/\}/g)||[]).length;
+        // Remove trailing incomplete item (last comma + partial object)
+        fixed = fixed.replace(/,\s*\{[^}]*$/, '');
+        fixed = fixed.replace(/,\s*"[^"]*$/, '');
+        for (let i = 0; i < opens; i++) fixed += ']';
+        for (let i = 0; i < openObj; i++) fixed += '}';
+        plan = JSON.parse(fixed);
+      }
       document.getElementById('loadingSection').style.display = 'none';
       renderResults(plan);
     } catch(e) {
