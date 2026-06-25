@@ -123,7 +123,17 @@ tr:hover td { background: rgba(255,255,255,.02); }
 @media(max-width:600px) {
   .param-grid { grid-template-columns: repeat(2, 1fr); }
   .budget-grid { grid-template-columns: 1fr; }
+  .timing-grid { grid-template-columns: 1fr; }
 }
+.timing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.timing.btn-sec { padding: 10px 12px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
+.timing-icon { font-size: 1.1rem; line-height: 1; margin-bottom: 2px; }
+.timing-label { font-size: 0.82rem; font-weight: 600; }
+.timing-hint { font-size: 0.7rem; color: var(--muted); font-weight: 400; }
+.timing.active { border-color: var(--gold) !important; background: rgba(209,161,83,0.08) !important; }
+.timing.active .timing-label { color: var(--gold); }
+.timing.active .timing-hint { color: rgba(209,161,83,0.6); }
+.timing.disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
 .dur-grid .btn-sec { padding: 9px 6px; font-size: 0.82rem; text-align: center; }
 .cal-wrap { overflow-x: auto; }
 .err { color: var(--red); font-size: 0.875rem; margin-top: 8px; display: none; }
@@ -360,6 +370,29 @@ tr:hover td { background: rgba(255,255,255,.02); }
         <button class="btn-sec dur" data-val="8" data-days="56">8 Minggu</button>
       </div>
     </div>
+
+    <div class="form-group">
+      <label>Timing Kampanye</label>
+      <div class="timing-grid" id="timingGrid">
+        <button class="btn-sec timing active" id="timingBefore" data-val="before" type="button">
+          <span class="timing-icon">⏮</span>
+          <span class="timing-label">Before Tayang</span>
+          <span class="timing-hint">Semua hari sebelum tanggal rilis</span>
+        </button>
+        <button class="btn-sec timing" id="timingBoth" data-val="both" type="button">
+          <span class="timing-icon">⏯</span>
+          <span class="timing-label">Before + After</span>
+          <span class="timing-hint">Dibagi rata sebelum & sesudah rilis</span>
+        </button>
+        <button class="btn-sec timing" id="timingAfter" data-val="after" type="button">
+          <span class="timing-icon">⏭</span>
+          <span class="timing-label">After Tayang</span>
+          <span class="timing-hint">Semua hari setelah tanggal rilis</span>
+        </button>
+      </div>
+      <p id="timingHint" style="font-size:0.75rem;color:var(--gold);margin-top:6px;display:none"></p>
+    </div>
+
     <p class="err" id="errMsg">Harap isi Judul, Sinopsis, Genre, dan Tanggal Tayang.</p>
     <button class="btn" id="genBtn">✦ Generate Campaign Plan</button>
   </div>
@@ -383,6 +416,7 @@ const WORKER_URL = 'https://campaign-plannergr.emilkwikku001.workers.dev';
 let dur = 1; // weeks
 let durDays = 7;
 let releaseType = 'bioskop'; // 'bioskop' | 'ott'
+let timing = 'before'; // 'before' | 'after' | 'both'
 let params = {
   audience: 'general',
   tone: 'general',
@@ -445,6 +479,62 @@ function setParam(btn) {
   params[key] = val;
 }
 
+function setTiming(val) {
+  timing = val;
+  updateTimingUI();
+}
+
+function updateTimingUI() {
+  const bothBtn = document.getElementById('timingBoth');
+  const hint    = document.getElementById('timingHint');
+
+  // "Both" only available if dur >= 2 weeks
+  if (dur < 2) {
+    if (timing === 'both') {
+      timing = 'before';
+    }
+    if (bothBtn) {
+      bothBtn.classList.add('disabled');
+      bothBtn.setAttribute('title', 'Butuh minimal 2 minggu untuk Before + After');
+    }
+    if (hint) {
+      hint.style.display = 'block';
+      hint.textContent = '⚠️ Durasi 1 minggu: hanya bisa Before atau After';
+    }
+  } else {
+    if (bothBtn) {
+      bothBtn.classList.remove('disabled');
+      bothBtn.removeAttribute('title');
+    }
+    if (hint) hint.style.display = 'none';
+  }
+
+  // Update active state
+  document.querySelectorAll('.timing').forEach(b => {
+    b.classList.remove('active');
+    b.style.borderColor = '';
+    b.style.color = '';
+  });
+  const activeBtn = document.querySelector('.timing[data-val="' + timing + '"]');
+  if (activeBtn && !activeBtn.classList.contains('disabled')) {
+    activeBtn.classList.add('active');
+    activeBtn.style.borderColor = 'var(--gold)';
+    activeBtn.style.color = 'var(--gold)';
+  }
+
+  // Update timing hint text
+  if (hint && dur >= 2) {
+    if (timing === 'both') {
+      const half = Math.floor(dur / 2);
+      const rem  = dur - half;
+      hint.style.display = 'block';
+      hint.textContent = '📅 ' + half + ' minggu sebelum + ' + rem + ' minggu sesudah tayang';
+    } else {
+      hint.style.display = 'none';
+    }
+  }
+}
+
 function showOTTHint(show) {
   let hint = document.getElementById('ottHint');
   if (!hint) {
@@ -469,6 +559,7 @@ function setDur(btn) {
   btn.style.color = 'var(--gold)';
   dur = parseInt(btn.dataset.val);
   durDays = parseInt(btn.dataset.days);
+  updateTimingUI();
 }
 
 function stepTick() {
@@ -632,7 +723,57 @@ async function generate() {
   const ex = Math.round(days * 0.65);
   const pl = Math.round(days * 0.85);
 
+  // Calculate timing split
+  let beforeDays, afterDays;
+  if (timing === 'before') {
+    beforeDays = days; afterDays = 0;
+  } else if (timing === 'after') {
+    beforeDays = 0; afterDays = days;
+  } else { // both
+    beforeDays = Math.floor(days / 2);
+    afterDays  = days - beforeDays;
+  }
+
+  // Date label: H-X for before, H+X for after, HARI TAYANG for day 0
+  function getDateLabel(d) {
+    if (timing === 'before') {
+      return 'H-' + (beforeDays - d + 1);
+    } else if (timing === 'after') {
+      return 'H+' + d;
+    } else {
+      // both: first beforeDays are pre-release, rest are post
+      if (d <= beforeDays) return 'H-' + (beforeDays - d + 1);
+      if (d === beforeDays + 1) return 'TAYANG';
+      return 'H+' + (d - beforeDays);
+    }
+  }
+
+  // Phase logic — After = post-release phases
   function getPhase(d) {
+    if (timing === 'after') {
+      // Post-release phases
+      if (d <= Math.round(afterDays * 0.3)) return 'Launch';
+      if (d <= Math.round(afterDays * 0.6)) return 'Post-Launch';
+      if (d <= Math.round(afterDays * 0.85)) return 'Sustenance';
+      return 'Long Tail';
+    }
+    if (timing === 'both') {
+      if (d <= beforeDays) {
+        // Pre-release
+        const pct = d / beforeDays;
+        if (pct <= 0.35) return 'Awareness';
+        if (pct <= 0.70) return 'Excitement';
+        return 'Pre-Launch';
+      } else {
+        // Post-release
+        const postD = d - beforeDays;
+        const pct = postD / afterDays;
+        if (pct <= 0.4) return 'Launch';
+        if (pct <= 0.75) return 'Post-Launch';
+        return 'Sustenance';
+      }
+    }
+    // Before only — original logic
     if (d <= aw) return 'Awareness';
     if (d <= ex) return 'Excitement';
     if (d <= pl) return 'Pre-Launch';
@@ -644,8 +785,9 @@ async function generate() {
   try {
     // CALL 1: Overview + phases — very short JSON
     const rPhase = await callAPI(
-      'Film Indonesia: ' + film + '. Sinopsis: ' + syn + '. Kampanye ' + dur + ' minggu.\n'
+      'Film Indonesia: ' + film + '. Sinopsis: ' + syn + '. Kampanye ' + dur + ' minggu (' + days + ' hari).\n'
       + releaseCtx + '\n'
+      + 'TIMING: ' + (timing === 'before' ? 'Semua ' + days + ' hari SEBELUM tayang — hype & awareness' : timing === 'after' ? 'Semua ' + days + ' hari SESUDAH tayang — post-release momentum & sustenance' : beforeDays + ' hari pre-release + ' + afterDays + ' hari post-release') + '.\n'
       + 'Jawab HANYA JSON ini (isi placeholder):\n'
       + '{"overview":{"totalPosts":' + (days*2) + ',"platforms":["Instagram","TikTok","X/Twitter","YouTube"],"phases":4,"targetAudience":"[5 kata target penonton]"},'
       + '"phases":[{"name":"Awareness","period":"H1-H' + aw + '","goal":"[tujuan 6 kata]","type":"1"},'
@@ -687,7 +829,7 @@ async function generate() {
         arr.forEach(item => {
           allDays.push({
             day: item.d,
-            date: 'D-' + (days - item.d + 1),
+            date: getDateLabel(item.d),
             phase: item.p || getPhase(item.d),
             items: [
               { platform: item.a.pl, type: item.a.t, title: item.a.ti, treatment: item.a.tr },
@@ -699,6 +841,18 @@ async function generate() {
         console.warn('Chunk H' + d1 + '-' + d2 + ' parse fail:', e.message);
         // Smart fallback berdasarkan fase
         const fallbackTemplates = {
+          'Post-Launch': [
+            { platform: 'TikTok',    type: 'Video',    title: 'Reaksi Penonton',    treatment: 'Kompilasi video reaksi penonton di bioskop/setelah nonton — ekspresi shock, nangis, atau bahagia. Caption: "Reaksi kalian tuh???" Tujuan: social proof & FOMO gelombang kedua.' },
+            { platform: 'Instagram', type: 'Carousel', title: 'Easter Eggs Breakdown', treatment: 'Carousel "X Detail Tersembunyi yang Kamu Lewatkan" dengan screenshot dari film. Jangan full spoiler — buat orang penasaran nonton ulang. Tujuan: dorong re-watch & diskusi.' }
+          ],
+          'Sustenance': [
+            { platform: 'TikTok',    type: 'Video',    title: 'BTS Deleted Scenes',  treatment: 'Potongan adegan atau momen lucu yang tidak masuk film final. Cast bercerita santai tentang proses syuting. Tujuan: perpanjang engagement, buat penonton merasa dekat dengan film.' },
+            { platform: 'Instagram', type: 'Carousel', title: 'Fan Theory Showcase', treatment: 'Repost teori-teori menarik dari fans di X/Twitter atau kolom komentar. Tambahkan respons singkat dari akun film. Tujuan: apresiasi komunitas, perpanjang diskusi organik.' }
+          ],
+          'Long Tail': [
+            { platform: 'YouTube',   type: 'Video',    title: 'Deep Dive Review',    treatment: 'Video long-form membahas makna tersembunyi, simbolisme, dan ending film. Undang kreator atau kritikus film. Tujuan: menjangkau penonton baru yang suka konten mendalam.' },
+            { platform: 'Instagram', type: 'Carousel', title: 'Milestone Apresiasi', treatment: 'Grafis perayaan pencapaian (100K penonton, chart streaming, dsb). Quote dari sutradara atau cast. Caption hangat ucapkan terima kasih. Tujuan: tutup kampanye dengan kesan positif.' }
+          ],
           'Awareness': [
             { platform: 'TikTok',    type: 'Video',    title: 'Cryptic Teaser Drop', treatment: 'Video 5-10 detik tanpa dialog — hanya musik/sound design film + judul muncul perlahan. Caption: angka atau kalimat misterius. Tujuan: bikin orang penasaran "film apa ini?"' },
             { platform: 'Instagram', type: 'Carousel', title: 'Stills Sinematik',    treatment: '3-5 foto behind-the-scenes atau still frame dengan color grading khas film. Tanpa wajah aktor di slide pertama. Caption pendek, estetik. Tujuan: bangun visual identity film.' }
@@ -721,7 +875,7 @@ async function generate() {
           const tmpl = fallbackTemplates[phase] || fallbackTemplates['Awareness'];
           allDays.push({
             day: dd,
-            date: 'D-' + (days - dd + 1),
+            date: getDateLabel(dd),
             phase,
             items: [
               { platform: tmpl[0].platform, type: tmpl[0].type, title: tmpl[0].title + ' (H' + dd + ')', treatment: tmpl[0].treatment },
@@ -1025,6 +1179,15 @@ function exportPDF() {
 // Init event listeners
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('genBtn').addEventListener('click', generate);
+  // Timing buttons
+  document.querySelectorAll('.timing').forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (this.classList.contains('disabled')) return;
+      setTiming(this.dataset.val);
+    });
+  });
+  updateTimingUI();
+
   document.querySelectorAll('.param').forEach(btn => {
     btn.addEventListener('click', function() { setParam(this); });
   });
