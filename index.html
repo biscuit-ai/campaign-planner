@@ -105,6 +105,9 @@ tr:hover td { background: rgba(255,255,255,.02); }
 .dur-grid .btn-sec { padding: 9px 6px; font-size: 0.82rem; text-align: center; }
 .cal-wrap { overflow-x: auto; }
 .err { color: var(--red); font-size: 0.875rem; margin-top: 8px; display: none; }
+.progress-wrap { width: 100%; max-width: 320px; height: 6px; background: var(--border); border-radius: 10px; margin: 16px auto 8px; overflow: hidden; }
+.progress-bar { height: 100%; background: var(--gold); border-radius: 10px; transition: width 0.5s ease; }
+.load-hint { font-size: 0.75rem; color: var(--muted); margin-top: 8px; opacity: 0.6; }
 @media(max-width:600px) { .form-row { grid-template-columns: 1fr; } header h1 { font-size: 1.8rem; } }
 </style>
 </head>
@@ -168,13 +171,11 @@ tr:hover td { background: rgba(255,255,255,.02); }
   <div id="loadingSection">
     <div class="loader"></div>
     <div class="load-title">Menyusun strategi kampanye...</div>
-    <div class="load-sub">AI sedang menganalisis film kamu</div>
-    <div class="steps">
-      <div class="step"><div class="dot" id="d0"></div><span>Menganalisis target audiens</span></div>
-      <div class="step"><div class="dot" id="d1"></div><span>Menyusun fase kampanye</span></div>
-      <div class="step"><div class="dot" id="d2"></div><span>Membuat konten kalender</span></div>
-      <div class="step"><div class="dot" id="d3"></div><span>Menulis caption per platform</span></div>
+    <div id="stepLabel" class="load-sub">Memulai...</div>
+    <div class="progress-wrap">
+      <div class="progress-bar" id="progressBar" style="width:5%"></div>
     </div>
+    <div class="load-hint">Setiap langkah butuh ~8-12 detik · Jangan tutup halaman</div>
   </div>
 
   <div id="resultsSection"></div>
@@ -225,15 +226,34 @@ function stepTick() {
   }, 1400);
 }
 
-async function callAPI(prompt) {
-  const r = await fetch(WORKER_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1200, messages: [{ role: 'user', content: prompt }] })
-  });
-  const d = await r.json();
-  if (d.error) throw new Error(typeof d.error === 'object' ? JSON.stringify(d.error) : d.error);
-  return d.content.map(b => b.text || '').join('').trim();
+async function callAPI(prompt, stepLabel) {
+  updateStep(stepLabel);
+
+  // 20s timeout per call
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 20000);
+
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 900,
+        messages: [{ role: 'user', content: prompt }]
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(tid);
+    const data = await res.json();
+    if (data.error === 'timeout') throw new Error('Request timeout — coba lagi');
+    if (data.error) throw new Error(typeof data.error === 'object' ? JSON.stringify(data.error) : data.error);
+    return data.content.map(b => b.text || '').join('').trim();
+  } catch(e) {
+    clearTimeout(tid);
+    if (e.name === 'AbortError') throw new Error('Timeout 20s — koneksi lambat, coba lagi');
+    throw e;
+  }
 }
 
 function safeJSON(raw) {
@@ -263,6 +283,16 @@ function parseCaption(raw) {
   return out;
 }
 
+function updateStep(label) {
+  const el = document.getElementById('stepLabel');
+  if (el) el.textContent = label;
+  const bar = document.getElementById('progressBar');
+  if (bar) {
+    const cur = parseInt(bar.style.width) || 0;
+    bar.style.width = Math.min(cur + 20, 90) + '%';
+  }
+}
+
 async function generate() {
   const title    = document.getElementById('movieTitle').value.trim();
   const synopsis = document.getElementById('movieSynopsis').value.trim();
@@ -280,85 +310,91 @@ async function generate() {
   document.getElementById('formSection').style.display = 'none';
   document.getElementById('loadingSection').style.display = 'block';
 
-  const iv = stepTick();
-  const film = `${title} | ${genre} | Tayang: ${relFmt} | Pemain: ${cast||'-'} | Kampanye: ${dur}`;
-  const syn  = synopsis.length > 280 ? synopsis.substring(0,280)+'...' : synopsis;
+  const film = title + " | " + genre + " | Tayang: " + relFmt + " | Pemain: " + (cast||'-');
+  const syn  = synopsis.length > 200 ? synopsis.substring(0, 200) + '...' : synopsis;
+  const weeks = dur;
+  const days  = durDays;
 
-  const pPhase = `Kamu adalah social media strategist film Indonesia. Jawab HANYA JSON valid.
-Film: ${film}. Sinopsis: ${syn}
-Buat overview dan 5 fase kampanye:
-{"overview":{"totalPosts":28,"platforms":["Instagram","TikTok","X/Twitter","YouTube"],"phases":5,"targetAudience":"[5 kata]"},"phases":[{"name":"[2 kata]","period":"[waktu singkat]","goal":"[8 kata]","type":"1"},{"name":"[2 kata]","period":"[waktu singkat]","goal":"[8 kata]","type":"2"},{"name":"[2 kata]","period":"[waktu singkat]","goal":"[8 kata]","type":"3"},{"name":"[2 kata]","period":"[waktu singkat]","goal":"[8 kata]","type":"4"},{"name":"[2 kata]","period":"[waktu singkat]","goal":"[8 kata]","type":"5"}]}
-Isi placeholder sesuai film. Balas hanya JSON.`;
-
-  // Dynamic calendar prompts built via buildCalPrompt()
-  // Each call handles max 15 days to stay under token limit
-  const buildCalPrompt = (dayStart, dayEnd, phaseHint) => {
-    const aw  = Math.round(durDays*0.3);
-    const ex  = Math.round(durDays*0.6);
-    const pl  = Math.round(durDays*0.8);
-    const phaseMap = 'Fase: hari 1-'+aw+'=Awareness, '+(aw+1)+'-'+ex+'=Excitement, '+(ex+1)+'-'+pl+'=Pre-Launch, '+(pl+1)+'-'+durDays+'=Launch.';
-    const exRow = '{"day":'+dayStart+',"date":"D-'+(durDays-dayStart+1)+'","phase":"'+phaseHint+'","items":['
-      + '{"platform":"TikTok","type":"Video","title":"[judul]","treatment":"[brief 10 kata]"},'
-      + '{"platform":"Instagram","type":"Carousel","title":"[judul]","treatment":"[brief 10 kata]"}'
-      + ']}';
-    return 'Content planner film Indonesia. Jawab HANYA JSON valid, tanpa markdown.\n'
-      + 'Film: '+film+'. Sinopsis: '+syn+'\n\n'
-      + 'Buat jadwal konten HARIAN hari ke-'+dayStart+' sampai ke-'+dayEnd+' dari total '+durDays+' hari kampanye.\n'
-      + 'Tiap hari 2 konten beda platform. Type: "Video"/"Carousel"/"Story"/"Reels"/"Thread".\n'
-      + phaseMap + '\n\n'
-      + '{"days":['+exRow+',...lanjutkan sampai hari '+dayEnd+']}\n\n'
-      + 'Isi semua placeholder dengan konten spesifik film. Balas hanya JSON.';
-  };
-
-  // Split into chunks of max 15 days
-  const chunks = [];
-  for (let i = 1; i <= durDays; i += 15) {
-    chunks.push([i, Math.min(i + 14, durDays)]);
-  }
-
-  // Phase hint per chunk
-  const phaseHints = ['Awareness','Excitement','Pre-Launch','Launch'];
-  const calPrompts = chunks.map((c, i) => buildCalPrompt(c[0], c[1], phaseHints[Math.min(i, phaseHints.length-1)]));
-
-  // Build all API calls
-  const allCalls = [callAPI(pPhase), ...calPrompts.map(p => callAPI(p)), callAPI(pTips), callAPI(pCap)];
+  // Phase boundaries
+  const aw = Math.round(days * 0.3);
+  const ex = Math.round(days * 0.6);
+  const pl = Math.round(days * 0.8);
+  const phaseMap = "Fase: H1-H" + aw + "=Awareness, H" + (aw+1) + "-H" + ex + "=Excitement, H" + (ex+1) + "-H" + pl + "=Pre-Launch, H" + (pl+1) + "-H" + days + "=Launch";
 
   try {
-    const results = await Promise.all(allCalls);
+    // === CALL 1: Overview + Phases ===
+    const pPhase = "Social media strategist film Indonesia. Jawab HANYA JSON valid tanpa markdown.\n"
+      + "Film: " + film + ". Sinopsis: " + syn + ". Kampanye " + weeks + " minggu.\n"
+      + "Buat overview dan 4 fase:\n"
+      + "{\"overview\":{\"totalPosts\":" + (days*2) + ",\"platforms\":[\"Instagram\",\"TikTok\",\"X/Twitter\",\"YouTube\"],\"phases\":4,\"targetAudience\":\"[5 kata]\"},"
+      + "\"phases\":[{\"name\":\"[2 kata]\",\"period\":\"[waktu]\",\"goal\":\"[7 kata]\",\"type\":\"1\"},{\"name\":\"[2 kata]\",\"period\":\"[waktu]\",\"goal\":\"[7 kata]\",\"type\":\"2\"},{\"name\":\"[2 kata]\",\"period\":\"[waktu]\",\"goal\":\"[7 kata]\",\"type\":\"3\"},{\"name\":\"[2 kata]\",\"period\":\"[waktu]\",\"goal\":\"[7 kata]\",\"type\":\"4\"}]}"
+      + "\nIsi placeholder sesuai film. Balas hanya JSON.";
 
-    clearInterval(iv);
-    for (let i = 0; i < 4; i++) { const d = document.getElementById('d'+i); if(d) d.className = 'dot done'; }
+    const rPhase = await callAPI(pPhase, "Menyusun fase kampanye...");
+    const phData = safeJSON(rPhase);
 
-    const rPh   = results[0];
-    const calResults = results.slice(1, 1 + chunks.length);
-    const rTips = results[1 + chunks.length];
-    const rCap  = results[2 + chunks.length];
+    // === CALL 2: Calendar chunk 1 (day 1 to min(15, days)) ===
+    const chunk1End = Math.min(15, days);
+    const pCal1 = "Content planner film Indonesia. Jawab HANYA JSON valid tanpa markdown.\n"
+      + "Film: " + film + ". " + phaseMap + ".\n"
+      + "Buat jadwal harian H1 sampai H" + chunk1End + " dari total " + days + " hari.\n"
+      + "Tiap hari 2 konten beda platform+type. Type: Video/Carousel/Story/Reels/Thread.\n"
+      + "{\"days\":[{\"day\":1,\"date\":\"D-" + (days) + "\",\"phase\":\"Awareness\",\"items\":[{\"platform\":\"TikTok\",\"type\":\"Video\",\"title\":\"[judul]\",\"treatment\":\"[8 kata]\"},{\"platform\":\"Instagram\",\"type\":\"Carousel\",\"title\":\"[judul]\",\"treatment\":\"[8 kata]\"}]},...sampai H" + chunk1End + "]}\n"
+      + "Isi sesuai film. Balas hanya JSON.";
 
-    const phData   = safeJSON(rPh);
-    const tipsData = safeJSON(rTips);
-    const captions = parseCaption(rCap);
+    const rCal1 = await callAPI(pCal1, "Membuat jadwal H1-H" + chunk1End + "...");
+    const cal1Data = safeJSON(rCal1);
+    const allDays = [...(cal1Data.days || [])];
 
-    // Merge all daily chunks
-    const allDays = [];
-    for (const r of calResults) {
+    // === CALL 3+: Remaining calendar chunks ===
+    for (let chunkStart = 16; chunkStart <= days; chunkStart += 15) {
+      const chunkEnd = Math.min(chunkStart + 14, days);
+      const pCal = "Content planner film Indonesia. Jawab HANYA JSON valid tanpa markdown.\n"
+        + "Film: " + film + ". " + phaseMap + ".\n"
+        + "Buat jadwal harian H" + chunkStart + " sampai H" + chunkEnd + " dari total " + days + " hari.\n"
+        + "Tiap hari 2 konten beda platform+type. Type: Video/Carousel/Story/Reels/Thread.\n"
+        + "{\"days\":[{\"day\":" + chunkStart + ",\"date\":\"D-" + (days-chunkStart+1) + "\",\"phase\":\"Excitement\",\"items\":[{\"platform\":\"Instagram\",\"type\":\"Carousel\",\"title\":\"[judul]\",\"treatment\":\"[8 kata]\"},{\"platform\":\"TikTok\",\"type\":\"Video\",\"title\":\"[judul]\",\"treatment\":\"[8 kata]\"}]},...sampai H" + chunkEnd + "]}\n"
+        + "Isi sesuai film. Balas hanya JSON.";
+
+      const rCal = await callAPI(pCal, "Membuat jadwal H" + chunkStart + "-H" + chunkEnd + "...");
       try {
-        const d = safeJSON(r);
-        if (d.days) allDays.push(...d.days);
-      } catch(e) { console.warn('chunk parse fail', e.message); }
+        const calData = safeJSON(rCal);
+        if (calData.days) allDays.push(...calData.days);
+      } catch(e) { console.warn("chunk parse fail:", e.message); }
     }
 
+    // === LAST CALL: Captions (plain text, no JSON) ===
+    const pCap = "Copywriter film Indonesia. Film: " + film + ". Sinopsis: " + syn + ".\n"
+      + "Tulis 4 caption media sosial Bahasa Indonesia. Format WAJIB:\n\n"
+      + "===1===\nPLATFORM: Instagram\nJUDUL: [judul]\nFASE: Awareness\n[caption emoji+hashtag]\n===END===\n"
+      + "===2===\nPLATFORM: TikTok\nJUDUL: [judul]\nFASE: Excitement\n[caption emoji+hashtag]\n===END===\n"
+      + "===3===\nPLATFORM: X/Twitter\nJUDUL: [judul]\nFASE: Pre-Launch\n[maks 250 karakter+hashtag]\n===END===\n"
+      + "===4===\nPLATFORM: YouTube\nJUDUL: [judul]\nFASE: Launch\n[deskripsi video+hashtag]\n===END===";
+
+    const rCap = await callAPI(pCap, "Menulis caption...");
+    const captions = parseCaption(rCap);
+
+    // === Done! ===
+    const bar = document.getElementById('progressBar');
+    if (bar) bar.style.width = '100%';
+
     plan = {
-      overview:      phData.overview      || { totalPosts: durDays*2, platforms:['Instagram','TikTok','X/Twitter','YouTube'], phases:5, targetAudience:'Penonton film Indonesia' },
-      phases:        phData.phases        || [],
+      overview:      phData.overview || { totalPosts: days*2, platforms: ['Instagram','TikTok','X/Twitter','YouTube'], phases: 4, targetAudience: 'Penonton film Indonesia' },
+      phases:        phData.phases   || [],
       days:          allDays,
       captions:      captions,
-      tipsBoxOffice: tipsData.tipsBoxOffice || []
+      tipsBoxOffice: [
+        { icon: '🎯', title: 'Maksimalkan Opening Weekend', desc: 'Fokus penuh 3 hari pertama, penentu perpanjangan jadwal bioskop' },
+        { icon: '📱', title: 'Viral TikTok Organik', desc: 'Buat challenge atau sound original yang mudah ditiru untuk efek snowball' },
+        { icon: '🤝', title: 'Micro Influencer Lokal', desc: '10 micro influencer lebih efektif dari 1 selebritis untuk komunitas' },
+        { icon: '🎟️', title: 'Nonton Bareng Komunitas', desc: 'Dorong group booking untuk isi kursi di hari weekday sepi' }
+      ]
     };
-yId('loadingSection').style.display = 'none';
+
+    document.getElementById('loadingSection').style.display = 'none';
     renderResults();
 
   } catch(e) {
-    clearInterval(iv);
     document.getElementById('loadingSection').style.display = 'none';
     document.getElementById('formSection').style.display = 'block';
     document.getElementById('errMsg').textContent = 'Gagal: ' + (e.message || 'Coba lagi.');
