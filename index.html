@@ -101,6 +101,8 @@ tr:hover td { background: rgba(255,255,255,.02); }
 .btn-group .btn { margin-top: 0; }
 .btn-sec { background: transparent; border: 1px solid var(--border2); color: #fff; font-weight: 600; border-radius: var(--radius-sm); padding: 12px 20px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.9rem; flex: 1; transition: background .15s; }
 .btn-sec:hover { background: var(--surface2); }
+.dur-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.dur-grid .btn-sec { padding: 9px 6px; font-size: 0.82rem; text-align: center; }
 .cal-wrap { overflow-x: auto; }
 .err { color: var(--red); font-size: 0.875rem; margin-top: 8px; display: none; }
 @media(max-width:600px) { .form-row { grid-template-columns: 1fr; } header h1 { font-size: 1.8rem; } }
@@ -148,9 +150,15 @@ tr:hover td { background: rgba(255,255,255,.02); }
     </div>
     <div class="form-group">
       <label>Durasi Kampanye</label>
-      <div style="display:flex;gap:10px">
-        <button class="btn-sec dur active" data-val="1 bulan" style="padding:10px">1 Bulan</button>
-        <button class="btn-sec dur" data-val="2 bulan" style="padding:10px">2 Bulan</button>
+      <div class="dur-grid">
+        <button class="btn-sec dur active" data-val="1" data-days="7">1 Minggu</button>
+        <button class="btn-sec dur" data-val="2" data-days="14">2 Minggu</button>
+        <button class="btn-sec dur" data-val="3" data-days="21">3 Minggu</button>
+        <button class="btn-sec dur" data-val="4" data-days="28">4 Minggu</button>
+        <button class="btn-sec dur" data-val="5" data-days="35">5 Minggu</button>
+        <button class="btn-sec dur" data-val="6" data-days="42">6 Minggu</button>
+        <button class="btn-sec dur" data-val="7" data-days="49">7 Minggu</button>
+        <button class="btn-sec dur" data-val="8" data-days="56">8 Minggu</button>
       </div>
     </div>
     <p class="err" id="errMsg">Harap isi Judul, Sinopsis, Genre, dan Tanggal Tayang.</p>
@@ -175,7 +183,8 @@ tr:hover td { background: rgba(255,255,255,.02); }
 <script>
 const WORKER_URL = 'https://campaign-plannergr.emilkwikku001.workers.dev';
 
-let dur = '1 bulan';
+let dur = 1; // weeks
+let durDays = 7;
 let plan = null;
 let meta = {};
 
@@ -203,7 +212,8 @@ function setDur(btn) {
   btn.classList.add('active');
   btn.style.borderColor = 'var(--gold)';
   btn.style.color = 'var(--gold)';
-  dur = btn.dataset.val;
+  dur = parseInt(btn.dataset.val);
+  durDays = parseInt(btn.dataset.days);
 }
 
 function stepTick() {
@@ -280,79 +290,71 @@ Buat overview dan 5 fase kampanye:
 {"overview":{"totalPosts":28,"platforms":["Instagram","TikTok","X/Twitter","YouTube"],"phases":5,"targetAudience":"[5 kata]"},"phases":[{"name":"[2 kata]","period":"[waktu singkat]","goal":"[8 kata]","type":"1"},{"name":"[2 kata]","period":"[waktu singkat]","goal":"[8 kata]","type":"2"},{"name":"[2 kata]","period":"[waktu singkat]","goal":"[8 kata]","type":"3"},{"name":"[2 kata]","period":"[waktu singkat]","goal":"[8 kata]","type":"4"},{"name":"[2 kata]","period":"[waktu singkat]","goal":"[8 kata]","type":"5"}]}
 Isi placeholder sesuai film. Balas hanya JSON.`;
 
-  const pCal = `Social media strategist film Indonesia. Jawab HANYA JSON valid.
-Film: ${film}
-Buat 7 minggu kalender konten:
-{"calendar":[{"week":"Minggu 1","phase":"[fase]","phaseType":"1","theme":"[4 kata]","monday":"[5 kata]","wednesday":"[5 kata]","friday":"[5 kata]","saturday":"[5 kata]","platforms":["Instagram"]},{"week":"Minggu 2","phase":"[fase]","phaseType":"1","theme":"[4 kata]","monday":"[5 kata]","wednesday":"[5 kata]","friday":"[5 kata]","saturday":"[5 kata]","platforms":["TikTok"]},{"week":"Minggu 3","phase":"[fase]","phaseType":"2","theme":"[4 kata]","monday":"[5 kata]","wednesday":"[5 kata]","friday":"[5 kata]","saturday":"[5 kata]","platforms":["YouTube","Instagram"]},{"week":"Minggu 4","phase":"[fase]","phaseType":"3","theme":"[4 kata]","monday":"[5 kata]","wednesday":"[5 kata]","friday":"[5 kata]","saturday":"[5 kata]","platforms":["TikTok","X/Twitter"]},{"week":"Minggu 5","phase":"[fase]","phaseType":"4","theme":"[4 kata]","monday":"[5 kata]","wednesday":"[5 kata]","friday":"[5 kata]","saturday":"[5 kata]","platforms":["Instagram"]},{"week":"Minggu 6","phase":"[fase]","phaseType":"5","theme":"[4 kata]","monday":"[5 kata]","wednesday":"[5 kata]","friday":"[5 kata]","saturday":"[5 kata]","platforms":["Instagram","TikTok"]},{"week":"Minggu 7","phase":"[fase]","phaseType":"5","theme":"[4 kata]","monday":"[5 kata]","wednesday":"[5 kata]","friday":"[5 kata]","saturday":"[5 kata]","platforms":["YouTube"]}]}
-Isi semua placeholder sesuai film. Balas hanya JSON.`;
+  // Dynamic calendar prompts built via buildCalPrompt()
+  // Each call handles max 15 days to stay under token limit
+  const buildCalPrompt = (dayStart, dayEnd, phaseHint) => {
+    const aw  = Math.round(durDays*0.3);
+    const ex  = Math.round(durDays*0.6);
+    const pl  = Math.round(durDays*0.8);
+    const phaseMap = 'Fase: hari 1-'+aw+'=Awareness, '+(aw+1)+'-'+ex+'=Excitement, '+(ex+1)+'-'+pl+'=Pre-Launch, '+(pl+1)+'-'+durDays+'=Launch.';
+    const exRow = '{"day":'+dayStart+',"date":"D-'+(durDays-dayStart+1)+'","phase":"'+phaseHint+'","items":['
+      + '{"platform":"TikTok","type":"Video","title":"[judul]","treatment":"[brief 10 kata]"},'
+      + '{"platform":"Instagram","type":"Carousel","title":"[judul]","treatment":"[brief 10 kata]"}'
+      + ']}';
+    return 'Content planner film Indonesia. Jawab HANYA JSON valid, tanpa markdown.\n'
+      + 'Film: '+film+'. Sinopsis: '+syn+'\n\n'
+      + 'Buat jadwal konten HARIAN hari ke-'+dayStart+' sampai ke-'+dayEnd+' dari total '+durDays+' hari kampanye.\n'
+      + 'Tiap hari 2 konten beda platform. Type: "Video"/"Carousel"/"Story"/"Reels"/"Thread".\n'
+      + phaseMap + '\n\n'
+      + '{"days":['+exRow+',...lanjutkan sampai hari '+dayEnd+']}\n\n'
+      + 'Isi semua placeholder dengan konten spesifik film. Balas hanya JSON.';
+  };
 
-  const pTips = `Social media strategist film Indonesia. Film: ${film}. Genre: ${genre}.
-Jawab HANYA JSON valid:
-{"tipsBoxOffice":[{"icon":"🎯","title":"[judul]","desc":"[12 kata]"},{"icon":"📱","title":"[judul]","desc":"[12 kata]"},{"icon":"🤝","title":"[judul]","desc":"[12 kata]"},{"icon":"🎟️","title":"[judul]","desc":"[12 kata]"}]}
-Tips spesifik untuk genre ${genre}. Balas hanya JSON.`;
+  // Split into chunks of max 15 days
+  const chunks = [];
+  for (let i = 1; i <= durDays; i += 15) {
+    chunks.push([i, Math.min(i + 14, durDays)]);
+  }
 
-  const pCap = `Copywriter film Indonesia. Film: ${film}. Sinopsis: ${syn}.
-Tulis 6 caption media sosial Bahasa Indonesia. Format WAJIB:
+  // Phase hint per chunk
+  const phaseHints = ['Awareness','Excitement','Pre-Launch','Launch'];
+  const calPrompts = chunks.map((c, i) => buildCalPrompt(c[0], c[1], phaseHints[Math.min(i, phaseHints.length-1)]));
 
-===1===
-PLATFORM: Instagram
-JUDUL: [judul konten]
-FASE: Awareness
-[caption dengan emoji dan hashtag]
-===END===
-===2===
-PLATFORM: TikTok
-JUDUL: [judul konten]
-FASE: Excitement
-[caption dengan emoji dan hashtag]
-===END===
-===3===
-PLATFORM: Instagram
-JUDUL: [judul konten]
-FASE: Pre-Launch
-[caption dengan emoji dan hashtag]
-===END===
-===4===
-PLATFORM: TikTok
-JUDUL: [judul konten]
-FASE: Launch
-[caption dengan emoji dan hashtag]
-===END===
-===5===
-PLATFORM: X/Twitter
-JUDUL: [judul konten]
-FASE: Engagement
-[caption maks 250 karakter dengan hashtag]
-===END===
-===6===
-PLATFORM: YouTube
-JUDUL: [judul konten]
-FASE: Launch
-[deskripsi video YouTube dengan hashtag]
-===END===`;
+  // Build all API calls
+  const allCalls = [callAPI(pPhase), ...calPrompts.map(p => callAPI(p)), callAPI(pTips), callAPI(pCap)];
 
   try {
-    const [rPh, rCal, rTips, rCap] = await Promise.all([
-      callAPI(pPhase), callAPI(pCal), callAPI(pTips), callAPI(pCap)
-    ]);
+    const results = await Promise.all(allCalls);
 
     clearInterval(iv);
     for (let i = 0; i < 4; i++) { const d = document.getElementById('d'+i); if(d) d.className = 'dot done'; }
 
+    const rPh   = results[0];
+    const calResults = results.slice(1, 1 + chunks.length);
+    const rTips = results[1 + chunks.length];
+    const rCap  = results[2 + chunks.length];
+
     const phData   = safeJSON(rPh);
-    const calData  = safeJSON(rCal);
     const tipsData = safeJSON(rTips);
     const captions = parseCaption(rCap);
 
+    // Merge all daily chunks
+    const allDays = [];
+    for (const r of calResults) {
+      try {
+        const d = safeJSON(r);
+        if (d.days) allDays.push(...d.days);
+      } catch(e) { console.warn('chunk parse fail', e.message); }
+    }
+
     plan = {
-      overview:      phData.overview      || { totalPosts:28, platforms:['Instagram','TikTok','X/Twitter','YouTube'], phases:5, targetAudience:'Penonton film Indonesia' },
+      overview:      phData.overview      || { totalPosts: durDays*2, platforms:['Instagram','TikTok','X/Twitter','YouTube'], phases:5, targetAudience:'Penonton film Indonesia' },
       phases:        phData.phases        || [],
-      calendar:      calData.calendar     || [],
+      days:          allDays,
       captions:      captions,
       tipsBoxOffice: tipsData.tipsBoxOffice || []
     };
-
-    document.getElementById('loadingSection').style.display = 'none';
+yId('loadingSection').style.display = 'none';
     renderResults();
 
   } catch(e) {
@@ -369,53 +371,84 @@ function renderResults() {
   el.style.display = 'block';
 
   const phases = (plan.phases||[]).map(p =>
-    `<div class="phase-item"><span class="ph-badge ${phClass(p.type)}">${p.name||''}</span><div><div class="ph-period">${p.period||''}</div><div class="ph-goal">${p.goal||''}</div></div></div>`
+    '<div class="phase-item"><span class="ph-badge ' + phClass(p.type) + '">' + (p.name||"") + '</span><div><div class="ph-period">' + (p.period||"") + '</div><div class="ph-goal">' + (p.goal||"") + '</div></div></div>'
   ).join('');
 
-  const calRows = (plan.calendar||[]).map(r => {
-    const days = [r.monday,r.wednesday,r.friday,r.saturday].filter(Boolean).join(' · ');
-    const plats = (r.platforms||[]).map(p => `<span class="ptag">${p}</span>`).join('');
-    return `<tr><td style="font-weight:600;white-space:nowrap">${r.week||''}</td><td><span class="ph-badge ${phClass(r.phaseType)}">${r.phase||''}</span></td><td>${r.theme||''}</td><td style="font-size:.8rem;color:var(--muted)">${days}</td><td>${plats}</td></tr>`;
+  // Build daily calendar grouped by phase
+  const typeIcon = { 'Video':'🎬', 'Reels':'📱', 'Carousel':'🖼️', 'Story':'⭕', 'Thread':'🧵' };
+  const typeColor = { 'Video':'background:rgba(209,161,83,.15);color:#d1a153', 'Reels':'background:rgba(78,239,178,.12);color:#4eefb2', 'Carousel':'background:rgba(120,160,255,.12);color:#78a0ff', 'Story':'background:rgba(255,120,80,.12);color:#ff7850', 'Thread':'background:rgba(220,120,255,.12);color:#dc78ff' };
+  const calRows = (plan.days||[]).map(d => {
+    const typeIcon = {'Video':'🎬','Reels':'📱','Carousel':'🖼️','Story':'⭕','Thread':'🧵'};
+    const typeColorMap = {'Video':'background:rgba(209,161,83,.15);color:#d1a153','Reels':'background:rgba(78,239,178,.12);color:#4eefb2','Carousel':'background:rgba(120,160,255,.12);color:#78a0ff','Story':'background:rgba(255,120,80,.12);color:#ff7850','Thread':'background:rgba(220,120,255,.12);color:#dc78ff'};
+    const items = (d.items||[]).map(it => {
+      const icon = typeIcon[it.type] || '📌';
+      const tcol = typeColorMap[it.type] || '';
+      const pcol = platColor[it.platform] || 'background:rgba(255,255,255,.08);color:#aaa';
+      return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:0.5px solid rgba(255,255,255,0.05)">'
+        + '<span style="font-size:1rem;flex-shrink:0">' + icon + '</span>'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap">'
+        + '<span style="font-size:0.7rem;font-weight:700;padding:1px 7px;border-radius:20px;' + tcol + '">' + (it.type||'') + '</span>'
+        + '<span style="font-size:0.7rem;padding:1px 7px;border-radius:20px;' + pcol + '">' + (it.platform||'') + '</span>'
+        + '</div>'
+        + '<div style="font-size:0.82rem;font-weight:600;margin-bottom:2px">' + (it.title||'') + '</div>'
+        + '<div style="font-size:0.78rem;color:var(--muted);line-height:1.4">' + (it.treatment||'') + '</div>'
+        + '</div></div>';
+    }).join('');
+    const phType = d.phase==='Awareness'?'1':d.phase==='Excitement'?'2':d.phase==='Engagement'?'3':d.phase==='Pre-Launch'?'4':'5';
+    return '<tr>'
+      + '<td style="white-space:nowrap;font-weight:700;color:var(--gold);font-size:0.85rem;vertical-align:top;padding-top:14px">H' + (d.day||'') + '</td>'
+      + '<td style="font-size:0.78rem;color:var(--muted);vertical-align:top;padding-top:14px;white-space:nowrap">' + (d.date||'') + '</td>'
+      + '<td style="vertical-align:top;padding-top:14px"><span class="ph-badge ' + phClass(phType) + '">' + (d.phase||'') + '</span></td>'
+      + '<td style="padding:8px 12px">' + items + '</td>'
+      + '</tr>';
   }).join('');
 
   const caps = (plan.captions||[]).map(c => {
     const style = platColor[c.platform] || 'background:rgba(255,255,255,.08);color:#fff';
     const safe = (c.caption||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     const capJSON = JSON.stringify(c.caption||'');
-    return `<div class="cap-card"><div class="cap-meta"><span class="cap-plat" style="${style}">${c.platform||''}</span><span class="cap-name">${c.title||''}</span><button class="copy-btn" data-cap='${capJSON.replace(/'/g,"&#39;")}'>Copy</button></div><div class="cap-text">${safe}</div></div>`;
+    return '<div class="cap-card">'
+      + '<div class="cap-meta">'
+      + '<span class="cap-plat" style="' + style + '">' + (c.platform||'') + '</span>'
+      + '<span class="cap-name">' + (c.title||'') + '</span>'
+      + "<button class=\"copy-btn\" data-cap='" + capJSON.replace(/'/g,"&#39;") + "'>Copy</button>"
+      + '</div>'
+      + '<div class="cap-text">' + safe + '</div>'
+      + '</div>';
   }).join('');
 
   const tips = (plan.tipsBoxOffice||[]).map(t =>
-    `<div class="tip"><div class="tip-icon">${t.icon||'💡'}</div><div class="tip-title">${t.title||''}</div><div class="tip-desc">${t.desc||''}</div></div>`
+    '<div class="tip"><div class="tip-icon">' + (t.icon||"💡") + '</div><div class="tip-title">' + (t.title||"") + '</div><div class="tip-desc">' + (t.desc||"") + '</div></div>'
   ).join('');
 
-  el.innerHTML = `
-    <div class="card">
-      <div class="out-header">
-        <div><div class="out-title">${meta.title}</div><div class="out-meta">${meta.genre} · Tayang ${meta.releaseFormatted}${meta.cast?' · '+meta.cast:''}</div></div>
-        <span class="ready">✓ Campaign Ready</span>
-      </div>
-      <div class="stats-row">
-        <div class="stat"><div class="n">${plan.overview.totalPosts||0}</div><div class="l">Total Konten</div></div>
-        <div class="stat"><div class="n">${(plan.overview.platforms||[]).length}</div><div class="l">Platform</div></div>
-        <div class="stat"><div class="n">${plan.overview.phases||0}</div><div class="l">Fase</div></div>
-        <div class="stat"><div class="n" style="font-size:1rem;padding-top:6px">${plan.overview.targetAudience||'-'}</div><div class="l">Target Audiens</div></div>
-      </div>
-      <div class="sec-title">🎬 Fase Kampanye</div>
-      <div class="phase-list">${phases}</div>
-      <div class="sec-title">📅 Kalender Konten</div>
-      <div class="cal-wrap"><table><thead><tr><th>Minggu</th><th>Fase</th><th>Tema</th><th>Jadwal Harian</th><th>Platform</th></tr></thead><tbody>${calRows}</tbody></table></div>
-      <div class="sec-title">✍️ Caption Siap Pakai</div>
-      ${caps}
-      <div class="sec-title">💡 Tips Box Office</div>
-      <div class="tips-grid">${tips}</div>
-      <div class="btn-group">
-        <button class="btn-sec" id="btnReset">← Buat Baru</button>
-        <button class="btn-sec" id="btnPrint">🖨 Print / Save PDF</button>
-        <button class="btn" id="btnPDF">⬇ Export PDF</button>
-      </div>
-    </div>`;
-
+  el.innerHTML = ''
+    + '<div class="card">'
+    + '<div class="out-header">'
+    + '<div><div class="out-title">' + meta.title + '</div>'
+    + '<div class="out-meta">' + meta.genre + ' · Tayang ' + meta.releaseFormatted + (meta.cast?' · '+meta.cast:'') + '</div></div>'
+    + '<span class="ready">✓ Campaign Ready</span>'
+    + '</div>'
+    + '<div class="stats-row">'
+    + '<div class="stat"><div class="n">' + (durDays*2) + '</div><div class="l">Total Konten</div></div>'
+    + '<div class="stat"><div class="n">' + (plan.overview.platforms||[]).length + '</div><div class="l">Platform</div></div>'
+    + '<div class="stat"><div class="n">' + (plan.overview.phases||0) + '</div><div class="l">Fase</div></div>'
+    + '<div class="stat"><div class="n" style="font-size:1rem;padding-top:6px">' + (plan.overview.targetAudience||'-') + '</div><div class="l">Target Audiens</div></div>'
+    + '</div>'
+    + '<div class="sec-title">🎬 Fase Kampanye</div>'
+    + '<div class="phase-list">' + phases + '</div>'
+    + '<div class="sec-title">📅 Kalender Harian (' + durDays + ' Hari)</div>'
+    + '<div class="cal-wrap"><table><thead><tr><th style="width:40px">Hari</th><th style="width:90px">Tanggal</th><th style="width:100px">Fase</th><th>Konten Harian (2x Post)</th></tr></thead><tbody>' + calRows + '</tbody></table></div>'
+    + '<div class="sec-title">✍️ Caption Siap Pakai</div>'
+    + caps
+    + '<div class="sec-title">💡 Tips Box Office</div>'
+    + '<div class="tips-grid">' + tips + '</div>'
+    + '<div class="btn-group">'
+    + '<button class="btn-sec" id="btnReset">← Buat Baru</button>'
+    + '<button class="btn-sec" id="btnPrint">🖨 Print / Save PDF</button>'
+    + '<button class="btn" id="btnPDF">⬇ Export PDF</button>'
+    + '</div>'
+    + '</div>';
   // Attach result button listeners
   document.getElementById('btnReset').addEventListener('click', resetApp);
   document.getElementById('btnPrint').addEventListener('click', printPlan);
@@ -439,17 +472,81 @@ function resetApp() {
 
 function printPlan() {
   if (!plan) return;
-  const ph = { '1':'rgba(209,161,83,.18)', '2':'rgba(78,239,178,.12)', '3':'rgba(255,120,80,.12)', '4':'rgba(120,160,255,.12)', '5':'rgba(220,120,255,.12)' };
-  const phc = { '1':'#d1a153','2':'#4eefb2','3':'#ff7850','4':'#78a0ff','5':'#dc78ff' };
-  const phases = (plan.phases||[]).map(p => `<div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start"><span style="background:${ph[p.type]||ph['1']};color:${phc[p.type]||phc['1']};padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap">${p.name}</span><div><div style="font-size:11px;color:#888">${p.period}</div><div style="font-size:12px">${p.goal}</div></div></div>`).join('');
-  const calRows = (plan.calendar||[]).map(r => { const days=[r.monday,r.wednesday,r.friday,r.saturday].filter(Boolean).join(', '); return `<tr><td style="font-weight:600">${r.week}</td><td><span style="background:${ph[r.phaseType]||ph['1']};color:${phc[r.phaseType]||phc['1']};padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${r.phase}</span></td><td>${r.theme}</td><td style="font-size:11px;color:#666">${days}</td><td style="font-size:11px">${(r.platforms||[]).join(', ')}</td></tr>`; }).join('');
-  const caps = (plan.captions||[]).map(c => `<div style="border-left:3px solid #d1a153;padding:10px 12px;background:#f9f7f0;margin-bottom:8px;border-radius:0 6px 6px 0;page-break-inside:avoid"><div style="font-size:11px;font-weight:700;color:#d1a153;margin-bottom:4px">${c.platform} · ${c.title}</div><div style="font-size:12px;line-height:1.6;white-space:pre-wrap">${(c.caption||'').replace(/</g,'&lt;')}</div></div>`).join('');
-  const tips = (plan.tipsBoxOffice||[]).map(t => `<div style="background:#f5f3ee;border-radius:8px;padding:10px;page-break-inside:avoid"><div style="font-size:1rem;margin-bottom:3px">${t.icon}</div><div style="font-weight:700;font-size:12px;color:#b8892d;margin-bottom:2px">${t.title}</div><div style="font-size:11px;color:#666">${t.desc}</div></div>`).join('');
+  const ph  = {'1':'rgba(209,161,83,.18)','2':'rgba(78,239,178,.12)','3':'rgba(255,120,80,.12)','4':'rgba(120,160,255,.12)','5':'rgba(220,120,255,.12)'};
+  const phc = {'1':'#d1a153','2':'#4eefb2','3':'#ff7850','4':'#78a0ff','5':'#dc78ff'};
+
+  const phases = (plan.phases||[]).map(p => {
+    const bg = ph[p.type]||ph['1']; const col = phc[p.type]||phc['1'];
+    return '<div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start">'
+      + '<span style="background:'+bg+';color:'+col+';padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap">'+(p.name||'')+'</span>'
+      + '<div><div style="font-size:11px;color:#888">'+(p.period||'')+'</div><div style="font-size:12px">'+(p.goal||'')+'</div></div>'
+      + '</div>';
+  }).join('');
+
+  const calRows = (plan.days||[]).map(d => {
+    const items = (d.items||[]).map(it =>
+      '<div style="margin-bottom:5px"><strong style="font-size:11px">['+( it.type||'')+'] '+( it.platform||'')+'</strong><br>'
+      + '<span style="font-size:11px;font-weight:600">'+(it.title||'')+'</span><br>'
+      + '<span style="font-size:10px;color:#666">'+(it.treatment||'')+'</span></div>'
+    ).join('');
+    const bg = ph[d.phase==='Awareness'?'1':d.phase==='Excitement'?'2':d.phase==='Engagement'?'3':d.phase==='Pre-Launch'?'4':'5']||ph['1'];
+    const col = phc[d.phase==='Awareness'?'1':d.phase==='Excitement'?'2':d.phase==='Engagement'?'3':d.phase==='Pre-Launch'?'4':'5']||phc['1'];
+    return '<tr>'
+      + '<td style="font-weight:700;color:#b8892d">H'+(d.day||'')+'</td>'
+      + '<td style="font-size:11px;color:#888;white-space:nowrap">'+(d.date||'')+'</td>'
+      + '<td><span style="background:'+bg+';color:'+col+';padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">'+(d.phase||'')+'</span></td>'
+      + '<td>'+items+'</td>'
+      + '</tr>';
+  }).join('');
+
+  const caps = (plan.captions||[]).map(c => {
+    const safe = (c.caption||'').replace(/</g,'&lt;');
+    return '<div style="border-left:3px solid #d1a153;padding:10px 12px;background:#f9f7f0;margin-bottom:8px;border-radius:0 6px 6px 0;page-break-inside:avoid">'
+      + '<div style="font-size:11px;font-weight:700;color:#d1a153;margin-bottom:4px">'+(c.platform||'')+' · '+(c.title||'')+'</div>'
+      + '<div style="font-size:12px;line-height:1.6;white-space:pre-wrap">'+safe+'</div>'
+      + '</div>';
+  }).join('');
+
+  const tips = (plan.tipsBoxOffice||[]).map(t =>
+    '<div style="background:#f5f3ee;border-radius:8px;padding:10px;page-break-inside:avoid">'
+    + '<div style="font-size:1rem;margin-bottom:3px">'+(t.icon||'')+'</div>'
+    + '<div style="font-weight:700;font-size:12px;color:#b8892d;margin-bottom:2px">'+(t.title||'')+'</div>'
+    + '<div style="font-size:11px;color:#666">'+(t.desc||'')+'</div>'
+    + '</div>'
+  ).join('');
+
   const win = window.open('','_blank');
-  win.document.write(`<!DOCTYPE html><html><head><title>${meta.title} — Campaign Plan</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#222;font-size:13px}.hdr{background:#1a1206;color:#d1a153;padding:22px 30px}.hdr h1{font-size:1.5rem;font-weight:700;margin-bottom:3px}.hdr p{font-size:12px;opacity:.7}.body{padding:22px 30px}.sec{margin-bottom:20px}.slbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#888;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #eee;color:#b8892d}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}.stat{background:#f9f7f0;border-radius:8px;padding:12px;text-align:center}.stat .n{font-size:1.4rem;font-weight:700;color:#b8892d}.stat .l{font-size:10px;color:#888;margin-top:2px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#f5f3ee;color:#b8892d;padding:7px 10px;text-align:left;font-size:11px}td{padding:7px 10px;border-bottom:1px solid #eee;vertical-align:top}.tips{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ftr{background:#1a1206;color:#888;padding:8px 30px;font-size:10px;display:flex;justify-content:space-between}@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}</style></head><body><div class="hdr"><h1>${meta.title}</h1><p>${meta.genre} · Tayang ${meta.releaseFormatted}${meta.cast?' · '+meta.cast:''}</p></div><div class="body"><div class="stats"><div class="stat"><div class="n">${plan.overview.totalPosts}</div><div class="l">Total Konten</div></div><div class="stat"><div class="n">${(plan.overview.platforms||[]).length}</div><div class="l">Platform</div></div><div class="stat"><div class="n">${plan.overview.phases}</div><div class="l">Fase</div></div><div class="stat"><div class="n" style="font-size:.75rem;padding-top:5px">${plan.overview.targetAudience}</div><div class="l">Target</div></div></div><div class="sec"><div class="slbl">Fase Kampanye</div>${phases}</div><div class="sec"><div class="slbl">Kalender Konten</div><table><thead><tr><th>Minggu</th><th>Fase</th><th>Tema</th><th>Jadwal</th><th>Platform</th></tr></thead><tbody>${calRows}</tbody></table></div><div class="sec"><div class="slbl">Caption Siap Pakai</div>${caps}</div><div class="sec"><div class="slbl">Tips Box Office</div><div class="tips">${tips}</div></div></div><div class="ftr"><span>${meta.title} — Box Office Campaign Plan</span><span>${new Date().toLocaleDateString('id-ID')}</span></div><script>window.onload=()=>window.print()<\/script></body></html>`);
+  const html = '<!DOCTYPE html><html><head><title>'+meta.title+' — Campaign Plan</title>'
+    + '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#222;font-size:13px}'
+    + '.hdr{background:#1a1206;color:#d1a153;padding:22px 30px}.hdr h1{font-size:1.5rem;font-weight:700;margin-bottom:3px}.hdr p{font-size:12px;opacity:.7}'
+    + '.body{padding:22px 30px}.sec{margin-bottom:20px}'
+    + '.slbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #eee;color:#b8892d}'
+    + '.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}'
+    + '.stat{background:#f9f7f0;border-radius:8px;padding:12px;text-align:center}.stat .n{font-size:1.4rem;font-weight:700;color:#b8892d}.stat .l{font-size:10px;color:#888;margin-top:2px}'
+    + 'table{width:100%;border-collapse:collapse;font-size:12px}th{background:#f5f3ee;color:#b8892d;padding:7px 10px;text-align:left;font-size:11px}td{padding:7px 10px;border-bottom:1px solid #eee;vertical-align:top}'
+    + '.tips{display:grid;grid-template-columns:1fr 1fr;gap:8px}'
+    + '.ftr{background:#1a1206;color:#888;padding:8px 30px;font-size:10px;display:flex;justify-content:space-between}'
+    + '@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}'
+    + '</style></head><body>'
+    + '<div class="hdr"><h1>'+meta.title+'</h1><p>'+meta.genre+' · Tayang '+meta.releaseFormatted+(meta.cast?' · '+meta.cast:'')+'</p></div>'
+    + '<div class="body">'
+    + '<div class="stats">'
+    + '<div class="stat"><div class="n">'+(durDays*2)+'</div><div class="l">Total Konten</div></div>'
+    + '<div class="stat"><div class="n">'+((plan.overview.platforms||[]).length)+'</div><div class="l">Platform</div></div>'
+    + '<div class="stat"><div class="n">'+(plan.overview.phases||0)+'</div><div class="l">Fase</div></div>'
+    + '<div class="stat"><div class="n" style="font-size:.75rem;padding-top:5px">'+(plan.overview.targetAudience||'-')+'</div><div class="l">Target</div></div>'
+    + '</div>'
+    + '<div class="sec"><div class="slbl">Fase Kampanye</div>'+phases+'</div>'
+    + '<div class="sec"><div class="slbl">Kalender Harian</div><table><thead><tr><th>Hari</th><th>Tanggal</th><th>Fase</th><th>Konten</th></tr></thead><tbody>'+calRows+'</tbody></table></div>'
+    + '<div class="sec"><div class="slbl">Caption Siap Pakai</div>'+caps+'</div>'
+    + '<div class="sec"><div class="slbl">Tips Box Office</div><div class="tips">'+tips+'</div></div>'
+    + '</div>'
+    + '<div class="ftr"><span>'+meta.title+' — Campaign Plan</span><span>'+new Date().toLocaleDateString('id-ID')+'</span></div>'
+    + '<scr'+'ipt>window.onload=()=>window.print()<\/scr'+'ipt>'
+    + '</body></html>';
+  win.document.write(html);
   win.document.close();
 }
-
 function exportPDF() {
   if (!plan || !window.jspdf) { printPlan(); return; }
   const { jsPDF } = window.jspdf;
@@ -462,7 +559,7 @@ function exportPDF() {
   doc.setTextColor(209,161,83); doc.setFont('helvetica','bold'); doc.setFontSize(16);
   doc.text('Box Office Campaign Plan', ml, 14);
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(180,150,80);
-  doc.text(`${meta.title}  ·  ${meta.genre}  ·  Tayang ${meta.releaseFormatted}`, ml, 22);
+  doc.text(meta.title+"  ·  "+meta.genre+"  ·  Tayang "+meta.releaseFormatted, ml, 22);
   doc.setTextColor(120,100,60);
   doc.text(new Date().toLocaleDateString('id-ID'), pw-mr, 22, {align:'right'});
   y = 44;
@@ -488,13 +585,13 @@ function exportPDF() {
   y+=5;
 
   sec('Caption Siap Pakai');
-  (plan.captions||[]).forEach(c=>{ const tl=doc.splitTextToSize(c.caption||'',pw-ml-mr-6); const ch=tl.length*3.8+12; chk(ch+4); doc.setFillColor(28,22,8);doc.roundedRect(ml,y,pw-ml-mr,ch,2,2,'F'); doc.setDrawColor(100,80,30);doc.roundedRect(ml,y,pw-ml-mr,ch,2,2,'S'); doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(209,161,83);doc.text(`${c.platform||''} · ${c.title||''}`,ml+4,y+5.5); doc.setFont('helvetica','normal');doc.setTextColor(200,185,140);doc.text(tl,ml+4,y+10.5); y+=ch+4; });
+  (plan.captions||[]).forEach(c=>{ const tl=doc.splitTextToSize(c.caption||"",pw-ml-mr-6); const ch=tl.length*3.8+12; chk(ch+4); doc.setFillColor(28,22,8);doc.roundedRect(ml,y,pw-ml-mr,ch,2,2,'F'); doc.setDrawColor(100,80,30);doc.roundedRect(ml,y,pw-ml-mr,ch,2,2,'S'); doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(209,161,83);doc.text((c.platform||"")+" · "+(c.title||""),ml+4,y+5.5); doc.setFont('helvetica','normal');doc.setTextColor(200,185,140);doc.text(tl,ml+4,y+10.5); y+=ch+4; });
 
   sec('Tips Box Office');
   (plan.tipsBoxOffice||[]).forEach(t=>{ chk(13); doc.setFillColor(28,22,8);doc.roundedRect(ml,y,pw-ml-mr,11,2,2,'F'); doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(209,161,83);doc.text(t.title||'',ml+4,y+4.5); doc.setFont('helvetica','normal');doc.setTextColor(160,140,90); const dl=doc.splitTextToSize(t.desc||'',pw-ml-mr-8);doc.text(dl,ml+4,y+8.5); y+=Math.max(13,dl.length*3.5+7); });
 
   const total=doc.internal.getNumberOfPages();
-  for(let pg=1;pg<=total;pg++){ doc.setPage(pg);doc.setFillColor(26,18,6);doc.rect(0,ph-9,pw,9,'F');doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(120,100,60);doc.text(`${meta.title} — Box Office Campaign Plan`,ml,ph-3.5);doc.text(`${pg}/${total}`,pw-mr,ph-3.5,{align:'right'}); }
+  for(let pg=1;pg<=total;pg++){ doc.setPage(pg);doc.setFillColor(26,18,6);doc.rect(0,ph-9,pw,9,'F');doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(120,100,60);doc.text(meta.title+" — Box Office Campaign Plan",ml,ph-3.5);doc.text(pg+"/"+total,pw-mr,ph-3.5,{align:'right'}); }
   doc.save('campaign-'+meta.title.replace(/[^a-zA-Z0-9]/g,'-').toLowerCase()+'.pdf');
 }
 
