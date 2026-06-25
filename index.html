@@ -8,22 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
-  // Attach all event listeners (CSP-safe)
-  document.addEventListener('DOMContentLoaded', function() {
-    // Add cast button
-    document.getElementById('addCastBtn').addEventListener('click', addCast);
-    // Generate button
-    document.getElementById('genBtn').addEventListener('click', generate);
-    // Duration buttons
-    document.querySelectorAll('.dur-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() { setDur(this, this.dataset.dur); });
-    });
-    // First cast row remove button
-    var firstRm = document.querySelector('.cast-row .rm');
-    if (firstRm) firstRm.addEventListener('click', function() { removeCast(this); });
-  });
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -33,634 +18,309 @@
     --border: rgba(255,255,255,0.08);
     --border2: rgba(255,255,255,0.14);
     --text: #f0f0f4;
-    --muted: #888899;
-    --accent: #7c6ff7;
-    --accent2: #5b52d4;
-    --accent-soft: rgba(124,111,247,0.15);
-    --accent-glow: rgba(124,111,247,0.25);
-    --green: #34c98a;
-    --green-soft: rgba(52,201,138,0.12);
-    --amber: #f0a040;
-    --amber-soft: rgba(240,160,64,0.12);
-    --red: #f05060;
-    --red-soft: rgba(240,80,96,0.12);
-    --blue: #4aa8f0;
-    --blue-soft: rgba(74,168,240,0.12);
+    --muted: #888894;
+    --primary: #d1a153;
+    --primary-hover: #bfa043;
+    --accent: #4eefb2;
+    --error: #ff5c5c;
     --radius: 12px;
     --radius-sm: 8px;
+    --font: 'Inter', sans-serif;
+    --font-heading: 'Sora', sans-serif;
   }
-  html { scroll-behavior: smooth; }
-  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
-
-  nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 2rem; height: 60px;
-    background: rgba(11,12,16,0.85); backdrop-filter: blur(16px);
-    border-bottom: 0.5px solid var(--border);
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    line-height: 1.6;
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
   }
-  .nav-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; }
-  .nav-logo .dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; }
-  .nav-logo span { font-family: 'Sora', sans-serif; font-size: 15px; color: var(--text); font-weight: 600; }
-  .nav-pill { font-size: 12px; color: var(--muted); border: 0.5px solid var(--border2); padding: 4px 12px; border-radius: 20px; }
-
-  .hero {
-    min-height: 100vh; display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    text-align: center; padding: 80px 1.5rem 4rem;
-    position: relative; overflow: hidden;
+  .container {
+    width: 100%;
+    max-width: 800px;
   }
-  .hero::before {
-    content: ''; position: absolute; top: -120px; left: 50%; transform: translateX(-50%);
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(124,111,247,0.12) 0%, transparent 70%);
-    pointer-events: none;
+  header {
+    margin-bottom: 40px;
+    text-align: center;
   }
-  .hero-eyebrow {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: var(--accent-soft); border: 0.5px solid rgba(124,111,247,0.3);
-    padding: 5px 14px; border-radius: 20px;
-    font-size: 12px; color: var(--accent); font-weight: 500; margin-bottom: 1.5rem;
+  h1 {
+    font-family: var(--font-heading);
+    font-size: 2.5rem;
+    color: #fff;
+    margin-bottom: 8px;
   }
-  .hero h1 {
-    font-family: 'Sora', sans-serif; font-size: clamp(2rem, 5vw, 3.5rem);
-    font-weight: 700; line-height: 1.15; margin-bottom: 1rem; max-width: 700px;
+  header p {
+    color: var(--muted);
+    font-size: 1.1rem;
   }
-  .hero h1 em { font-style: normal; color: var(--accent); }
-  .hero p { font-size: 16px; color: var(--muted); max-width: 480px; margin: 0 auto 2.5rem; line-height: 1.7; }
-  .hero-cta {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: var(--accent); color: #fff; padding: 13px 28px;
-    border-radius: var(--radius-sm); font-size: 15px; font-weight: 600;
-    text-decoration: none; border: none; cursor: pointer;
-    transition: background 0.15s, transform 0.1s;
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    margin-bottom: 24px;
   }
-  .hero-cta:hover { background: var(--accent2); transform: translateY(-1px); }
-  .hero-stats { display: flex; gap: 2rem; margin-top: 3.5rem; justify-content: center; flex-wrap: wrap; }
-  .hero-stat { text-align: center; }
-  .hero-stat .n { font-family: 'Sora',sans-serif; font-size: 28px; font-weight: 700; color: var(--text); }
-  .hero-stat .l { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-  section { padding: 5rem 1.5rem; max-width: 860px; margin: 0 auto; }
-  .section-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; }
-  .section-title { font-family: 'Sora', sans-serif; font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700; margin-bottom: 1rem; }
-  .section-sub { color: var(--muted); font-size: 15px; max-width: 520px; line-height: 1.7; }
-
-  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 2.5rem; }
-  .feat-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.25rem; transition: border-color 0.2s; }
-  .feat-card:hover { border-color: var(--border2); }
-  .feat-icon { width: 36px; height: 36px; background: var(--accent-soft); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 0.75rem; }
-  .feat-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-  .feat-card p { font-size: 12px; color: var(--muted); line-height: 1.6; }
-
-  #app { scroll-margin-top: 80px; }
-  .form-wrap { background: var(--surface); border: 0.5px solid var(--border); border-radius: 16px; padding: 2rem; margin-top: 2rem; }
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-  .fg { display: flex; flex-direction: column; gap: 6px; }
-  .fg.full { grid-column: 1 / -1; }
-  .fg label { font-size: 13px; font-weight: 500; color: var(--muted); }
-  .fg label .req { color: var(--red); }
-  .fg input, .fg select, .fg textarea {
-    background: var(--surface2); border: 0.5px solid var(--border2);
-    border-radius: var(--radius-sm); padding: 10px 14px;
-    color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px;
-    width: 100%; transition: border-color 0.15s;
-    -webkit-appearance: none; appearance: none;
+  .form-group {
+    margin-bottom: 24px;
   }
-  .fg select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888899' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
+  label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    color: var(--muted);
   }
-  .fg input:focus, .fg select:focus, .fg textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-  .fg textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
-  .cast-row { display: flex; gap: 8px; margin-bottom: 6px; }
-  .cast-row input { flex: 1; }
-  .cast-row .rm { background: none; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 0 12px; color: var(--muted); cursor: pointer; font-size: 18px; flex-shrink: 0; transition: all 0.1s; }
-  .cast-row .rm:hover { background: var(--red-soft); color: var(--red); border-color: var(--red); }
-  .add-cast-btn { background: none; border: 0.5px dashed var(--border2); border-radius: var(--radius-sm); padding: 9px; color: var(--muted); cursor: pointer; font-size: 13px; width: 100%; margin-top: 4px; transition: all 0.15s; }
-  .add-cast-btn:hover { border-color: var(--accent); color: var(--accent); border-style: solid; }
-  .dur-group { display: flex; gap: 8px; }
-  .dur-btn { flex: 1; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 9px; font-size: 13px; color: var(--muted); cursor: pointer; font-family: 'Inter',sans-serif; transition: all 0.15s; }
-  .dur-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
-  .gen-btn { width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 1.25rem; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Inter', sans-serif; transition: background 0.15s; }
-  .gen-btn:hover { background: var(--accent2); }
-  .gen-btn:disabled { background: var(--surface2); color: var(--muted); cursor: not-allowed; }
-  .err { color: var(--red); font-size: 13px; margin-top: 8px; display: none; }
-
-  #loadingSection { display: none; text-align: center; padding: 4rem 1rem; background: var(--surface); border: 0.5px solid var(--border); border-radius: 16px; margin-top: 2rem; }
-  .loader { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--border2); border-top-color: var(--accent); animation: spin .7s linear infinite; margin: 0 auto 1.25rem; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .load-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
-  .load-sub { font-size: 13px; color: var(--muted); }
-  .load-steps { display: flex; flex-direction: column; gap: 6px; margin-top: 1.5rem; max-width: 280px; margin-left: auto; margin-right: auto; }
-  .load-step { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); text-align: left; }
-  .step-dot { width: 6px; height: 6px; background: var(--border2); border-radius: 50%; flex-shrink: 0; transition: background 0.3s; }
-  .step-dot.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
-  .step-dot.done { background: var(--green); }
-
-  #resultsSection { display: none; margin-top: 2rem; }
-  .result-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 0.5px solid var(--border); }
-  .result-title { font-family: 'Sora',sans-serif; font-size: 20px; font-weight: 700; }
-  .result-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
-  .ready-badge { display: inline-flex; align-items: center; gap: 5px; background: var(--green-soft); border: 0.5px solid rgba(52,201,138,0.3); color: var(--green); padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-  .export-bar { display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap; }
-  .exp-btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; border: 0.5px solid var(--border2); font-family: 'Inter', sans-serif; transition: all 0.15s; }
-  .exp-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .exp-btn.primary:hover { background: var(--accent2); }
-  .exp-btn.secondary { background: var(--surface2); color: var(--text); }
-  .exp-btn.secondary:hover { border-color: var(--border2); }
-  .exp-btn.ghost { background: none; color: var(--muted); }
-  .exp-btn.ghost:hover { color: var(--text); background: var(--surface2); }
-
-  .rlabel { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.75rem; margin-top: 1.75rem; }
-  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
-  .s-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 1rem; text-align: center; }
-  .s-card .sn { font-family: 'Sora',sans-serif; font-size: 24px; font-weight: 700; color: var(--text); }
-  .s-card .sl { font-size: 11px; color: var(--muted); margin-top: 3px; }
-
-  .phases-list { display: flex; flex-direction: column; gap: 8px; margin-top: 0.75rem; }
-  .phase-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); }
-  .pbadge { padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; margin-top: 2px; }
-  .ph1 { background: rgba(124,111,247,0.15); color: #a89cf7; }
-  .ph2 { background: rgba(52,201,138,0.12); color: #34c98a; }
-  .ph3 { background: rgba(240,160,64,0.12); color: #f0a040; }
-  .ph4 { background: rgba(240,80,96,0.12); color: #f05060; }
-  .ph5 { background: rgba(74,168,240,0.12); color: #4aa8f0; }
-  .phase-item .pinfo .pp { font-size: 11px; color: var(--muted); }
-  .phase-item .pinfo .pg { font-size: 13px; color: var(--text); margin-top: 2px; }
-
-  .cal-wrap { overflow-x: auto; border: 0.5px solid var(--border); border-radius: var(--radius); }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 580px; }
-  thead th { background: var(--surface2); padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; border-bottom: 0.5px solid var(--border); }
-  tbody td { padding: 10px 12px; border-bottom: 0.5px solid var(--border); vertical-align: top; }
-  tbody tr:last-child td { border-bottom: none; }
-  tbody tr:hover { background: var(--surface2); }
-  .ptag { display: inline-block; padding: 2px 7px; background: var(--surface2); border-radius: 5px; font-size: 11px; color: var(--muted); margin: 1px; }
-
-  .captions-list { display: flex; flex-direction: column; gap: 10px; margin-top: 0.75rem; }
-  .cap-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.1rem; }
-  .cap-card:hover { border-color: var(--border2); }
-  .cap-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .cap-meta { display: flex; align-items: center; gap: 8px; }
-  .cap-plat { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 20px; }
-  .cap-name { font-size: 12px; color: var(--muted); font-weight: 500; }
-  .copy-btn { display: inline-flex; align-items: center; gap: 4px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 500; color: var(--muted); cursor: pointer; font-family: 'Inter',sans-serif; transition: all 0.15s; }
-  .copy-btn:hover { color: var(--text); border-color: var(--accent); }
-  .copy-btn.copied { color: var(--green); border-color: var(--green); }
-  .cap-text { font-size: 13px; line-height: 1.7; color: var(--text); white-space: pre-wrap; word-break: break-word; }
-
-  .tips-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin-top: 0.75rem; }
-  .tip-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.1rem; }
-  .tip-icon { font-size: 20px; margin-bottom: 8px; }
-  .tip-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
-  .tip-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
-
-  .reset-row { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 0.5px solid var(--border); display: flex; justify-content: center; }
-
-  footer { border-top: 0.5px solid var(--border); padding: 2rem 1.5rem; text-align: center; color: var(--muted); font-size: 12px; }
-  footer a { color: var(--accent); text-decoration: none; }
-
-  @media (max-width: 600px) {
-    .form-grid { grid-template-columns: 1fr; }
-    .fg.full { grid-column: 1; }
-    nav { padding: 0 1rem; }
-    section { padding: 3rem 1rem; }
-    .form-wrap { padding: 1.25rem; }
-    .hero h1 { font-size: 1.8rem; }
+  input[type="text"], input[type="date"], textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    color: #fff;
+    font-family: var(--font);
+    font-size: 1rem;
+    transition: all 0.2s ease;
+  }
+  input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(209, 161, 83, 0.15);
+  }
+  textarea {
+    resize: vertical;
+    min-height: 120px;
+  }
+  .btn {
+    background: var(--primary);
+    color: #000;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 16px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.2s;
+  }
+  .btn:hover {
+    background: var(--primary-hover);
+  }
+  .loading {
+    display: none;
+    text-align: center;
+    color: var(--muted);
+    font-style: italic;
+    margin: 20px 0;
+  }
+  .output-card {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 32px;
+  }
+  .output-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+  }
+  .output-title {
+    font-family: var(--font-heading);
+    font-size: 1.8rem;
+    color: #fff;
+  }
+  .sec-title {
+    color: var(--primary);
+    font-size: 1.2rem;
+    margin: 24px 0 12px 0;
+    font-family: var(--font-heading);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 12px;
+    text-align: left;
+  }
+  th {
+    background: var(--surface2);
+    color: var(--muted);
+  }
+  .btn-group {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+  }
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: #fff;
+  }
+  .btn-secondary:hover {
+    background: var(--surface2);
   }
 </style>
 </head>
 <body>
 
-<nav>
-  <a class="nav-logo" href="#">
-    <div class="dot"></div>
-    <span>Campaign Planner</span>
-  </a>
-  <span class="nav-pill">🎬 Film Box Office</span>
-</nav>
+<div class="container">
+  <header>
+    <h1>Campaign Planner</h1>
+    <p>Box Office Film Strategy Generator</p>
+  </header>
 
-<div class="hero">
-  <div class="hero-eyebrow">✦ AI-Powered Content Strategy</div>
-  <h1>Bikin kampanye film yang <em>beneran</em> Box Office</h1>
-  <p>Masukkan judul, sinopsis, dan tanggal tayang — AI kami susun kalender konten, caption, dan strategi lengkap untuk semua platform.</p>
-  <a href="#app" class="hero-cta">Mulai Sekarang →</a>
-  <div class="hero-stats">
-    <div class="hero-stat"><div class="n">4</div><div class="l">Platform Sekaligus</div></div>
-    <div class="hero-stat"><div class="n">5</div><div class="l">Fase Kampanye</div></div>
-    <div class="hero-stat"><div class="n">PDF</div><div class="l">Siap Export</div></div>
+  <div id="formSection" class="card">
+    <div class="form-group">
+      <label for="movieTitle">Judul Film</label>
+      <input type="text" id="movieTitle" placeholder="Contoh: Dilan 1997 / Ancika" />
+    </div>
+    
+    <div class="form-group">
+      <label for="movieSynopsis">Sinopsis</label>
+      <textarea id="movieSynopsis" placeholder="Masukkan sinopsis lengkap film di sini..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="movieCast">Pemain Utama / Cast</label>
+      <input type="text" id="movieCast" placeholder="Contoh: Arbani Yasiz (Dilan), Zee JKT48 (Ancika)" />
+    </div>
+
+    <div class="form-group">
+      <label for="releaseDate">Tanggal Tayang</label>
+      <input type="date" id="releaseDate" />
+    </div>
+
+    <button class="btn" onclick="generateStrategy()">Generate Campaign Strategy</button>
   </div>
+
+  <div id="loadingSection" class="loading">
+    Sedang merumuskan strategi Box Office terbaik untuk film Anda...
+  </div>
+
+  <div id="resultsSection" class="output-card"></div>
 </div>
 
-<section>
-  <div class="section-eyebrow">Fitur Unggulan</div>
-  <div class="section-title">Semua yang kamu butuhkan<br/>dalam satu klik</div>
-  <div class="features-grid">
-    <div class="feat-card"><div class="feat-icon">📅</div><h3>Konten Kalender</h3><p>Jadwal posting harian hingga 2 bulan, lengkap dengan tema dan platform per minggu.</p></div>
-    <div class="feat-card"><div class="feat-icon">✍️</div><h3>Caption Siap Pakai</h3><p>Caption per platform (IG, TikTok, X, YouTube) dengan hashtag — tinggal copy-paste.</p></div>
-    <div class="feat-card"><div class="feat-icon">🎯</div><h3>Fase Kampanye</h3><p>Strategi bertahap dari Awareness sampai Launch Day, dengan goal yang terukur.</p></div>
-    <div class="feat-card"><div class="feat-icon">📄</div><h3>Export PDF</h3><p>Dokumen profesional siap presentasi ke produser, sponsor, atau tim marketing.</p></div>
-  </div>
-</section>
-
-<section id="app">
-  <div class="section-eyebrow">Generator</div>
-  <div class="section-title">Masukkan data film kamu</div>
-  <div class="section-sub">Isi form di bawah — hasilnya keluar dalam hitungan detik.</div>
-
-  <div class="form-wrap" id="formSection">
-    <div class="form-grid">
-      <div class="fg full">
-        <label>Judul Film <span class="req">*</span></label>
-        <input type="text" id="movieTitle" placeholder="Contoh: Garis Waktu" autocomplete="off" />
-      </div>
-      <div class="fg">
-        <label>Tanggal Tayang <span class="req">*</span></label>
-        <input type="date" id="releaseDate" />
-      </div>
-      <div class="fg">
-        <label>Genre <span class="req">*</span></label>
-        <select id="genre">
-          <option value="">Pilih genre...</option>
-          <option>Drama Romansa</option>
-          <option>Horor / Thriller</option>
-          <option>Aksi / Laga</option>
-          <option>Komedi</option>
-          <option>Petualangan</option>
-          <option>Animasi</option>
-          <option>Dokumenter</option>
-          <option>Biografi</option>
-        </select>
-      </div>
-      <div class="fg full">
-        <label>Sinopsis <span class="req">*</span></label>
-        <textarea id="synopsis" placeholder="Ceritakan singkat tentang film ini — siapa karakternya, apa konfliknya, apa yang bikin penonton penasaran..."></textarea>
-      </div>
-      <div class="fg full">
-        <label>Pemain Utama <span style="color:var(--muted);font-weight:400">(opsional)</span></label>
-        <div id="castList">
-          <div class="cast-row">
-            <input type="text" placeholder="Nama pemain, misal: Abun Sungkar" />
-            <button class="rm" type="button">×</button>
-          </div>
-        </div>
-        <button class="add-cast-btn" id="addCastBtn" type="button">+ Tambah pemain</button>
-      </div>
-      <div class="fg full">
-        <label>Durasi Kampanye</label>
-        <div class="dur-group">
-          <button class="dur-btn active" data-dur="1 bulan" type="button">1 Bulan</button>
-          <button class="dur-btn" data-dur="2 bulan" type="button">2 Bulan</button>
-        </div>
-      </div>
-    </div>
-    <div class="err" id="errMsg">Harap lengkapi judul, tanggal tayang, genre, dan sinopsis.</div>
-    <button class="gen-btn" id="genBtn" type="button">✦ Generate Campaign Plan</button>
-  </div>
-
-  <div id="loadingSection">
-    <div class="loader"></div>
-    <div class="load-title">Menyusun strategi kampanye...</div>
-    <div class="load-sub">AI sedang bekerja untuk film kamu</div>
-    <div class="load-steps">
-      <div class="load-step"><div class="step-dot" id="s0"></div><span>Menganalisis target audiens</span></div>
-      <div class="load-step"><div class="step-dot" id="s1"></div><span>Menyusun fase kampanye</span></div>
-      <div class="load-step"><div class="step-dot" id="s2"></div><span>Membuat konten kalender</span></div>
-      <div class="load-step"><div class="step-dot" id="s3"></div><span>Menulis caption per platform</span></div>
-      <div class="load-step"><div class="step-dot" id="s4"></div><span>Finalisasi strategi Box Office</span></div>
-    </div>
-  </div>
-
-  <div id="resultsSection"></div>
-</section>
-
-<footer>
-  <p>Dibuat dengan ❤️ untuk industri film Indonesia &nbsp;·&nbsp; <a href="#app">Buat kampanye baru</a></p>
-</footer>
-
 <script>
-  // ⚠️ GANTI INI dengan URL Cloudflare Worker kamu setelah deploy
-  // Contoh: https://campaign-proxy.biscuit-ai.workers.dev
-  const WORKER_URL = 'https://campaign-proxy.biscuit-ai.workers.dev';
+  let generatedPlan = null;
+  let metaData = {};
 
-  let dur = '1 bulan';
-  let plan = null;
-  let meta = {};
+  function generateStrategy() {
+    const title = document.getElementById('movieTitle').value;
+    const synopsis = document.getElementById('movieSynopsis').value;
+    const cast = document.getElementById('movieCast').value; // Mengambil input pemain
+    const rDate = document.getElementById('releaseDate').value;
 
-  const phColors = {
-    '1': { bg: 'rgba(124,111,247,0.15)', color: '#a89cf7' },
-    '2': { bg: 'rgba(52,201,138,0.12)', color: '#34c98a' },
-    '3': { bg: 'rgba(240,160,64,0.12)', color: '#f0a040' },
-    '4': { bg: 'rgba(240,80,96,0.12)', color: '#f05060' },
-    '5': { bg: 'rgba(74,168,240,0.12)', color: '#4aa8f0' },
-  };
-  const platColors = {
-    'Instagram': { bg: 'rgba(240,80,96,0.12)', color: '#f05060' },
-    'TikTok':    { bg: 'rgba(52,201,138,0.12)', color: '#34c98a' },
-    'X/Twitter': { bg: 'rgba(74,168,240,0.12)', color: '#4aa8f0' },
-    'YouTube':   { bg: 'rgba(240,80,96,0.15)', color: '#ff6060' },
-  };
+    if (!title || !synopsis || !rDate) {
+      alert('Mohon isi semua field penting (Judul, Sinopsis, dan Tanggal Tayang)!');
+      return;
+    }
 
-  function phClass(t) { return ['ph1','ph2','ph3','ph4','ph5'][parseInt(t)-1] || 'ph1'; }
-  function setDur(btn, val) { document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); dur = val; }
-  function addCast() {
-    const l = document.getElementById('castList');
-    const r = document.createElement('div');
-    r.className = 'cast-row';
-    const inp = document.createElement('input');
-    inp.type = 'text';
-    inp.placeholder = 'Nama pemain';
-    const rmBtn = document.createElement('button');
-    rmBtn.className = 'rm';
-    rmBtn.type = 'button';
-    rmBtn.textContent = '×';
-    rmBtn.addEventListener('click', function() { removeCast(this); });
-    r.appendChild(inp);
-    r.appendChild(rmBtn);
-    l.appendChild(r);
-    inp.focus();
-  }
-  function removeCast(btn) { if (document.querySelectorAll('.cast-row').length > 1) btn.parentElement.remove(); }
-  function copyText(btn, text) { navigator.clipboard.writeText(text).then(() => { btn.classList.add('copied'); btn.textContent = '✓ Copied'; setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'Copy'; }, 1600); }); }
-
-  async function generate() {
-    const title = document.getElementById('movieTitle').value.trim();
-    const date = document.getElementById('releaseDate').value;
-    const genre = document.getElementById('genre').value;
-    const synopsis = document.getElementById('synopsis').value.trim();
-    const err = document.getElementById('errMsg');
-    if (!title || !date || !genre || !synopsis) { err.style.display = 'block'; return; }
-    err.style.display = 'none';
-
-    const cast = Array.from(document.querySelectorAll('.cast-row input')).map(i => i.value.trim()).filter(Boolean);
-    const relFmt = new Date(date + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-    meta = { title, genre, releaseFormatted: relFmt, cast };
-
-    document.getElementById('formSection').style.display = 'none';
     document.getElementById('loadingSection').style.display = 'block';
-    document.getElementById('app').scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('resultsSection').style.display = 'none';
 
-    let step = 0;
-    const iv = setInterval(() => {
-      if (step > 0) document.getElementById('s'+(step-1)).className = 'step-dot done';
-      if (step < 5) { document.getElementById('s'+step).className = 'step-dot active'; step++; }
-      else clearInterval(iv);
-    }, 1500);
+    metaData = { title, synopsis, cast, releaseDate: rDate };
 
-    const filmInfo = `${title} | ${genre} | Tayang: ${relFmt} | Pemain: ${cast.length ? cast.join(', ') : '-'} | Kampanye: ${dur}`;
-    const sinopsisShort = synopsis.length > 300 ? synopsis.substring(0, 300) + '...' : synopsis;
-
-    const callAPI = async (prompt) => {
-      const res = await fetch(WORKER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 1024,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(JSON.stringify(data.error));
-      return data.content.map(b => b.text || '').join('').trim();
-    };
-
-    const safeJSON = (raw) => {
-      const cleaned = raw.replace(/```json|```/g, '').trim();
-      const match = cleaned.match(/\{[\s\S]*\}/);
-      return JSON.parse(match ? match[0] : cleaned);
-    };
-
-    // 4 call kecil paralel — masing2 max ~800 token output
-    const pOverview = `Film Indonesia: ${filmInfo}. Sinopsis: ${sinopsisShort}. Kampanye ${dur}.
-Jawab HANYA JSON (tanpa markdown):
-{"overview":{"totalPosts":28,"platforms":["Instagram","TikTok","X/Twitter","YouTube"],"phases":5,"targetAudience":"remaja 17-25 tahun"},"phases":[{"name":"Awareness","period":"4 minggu sebelum tayang","goal":"Bangun pengenalan film","type":"1"},{"name":"Excitement","period":"3 minggu sebelum tayang","goal":"Tingkatkan antusiasme","type":"2"},{"name":"Engagement","period":"2 minggu sebelum tayang","goal":"Interaksi aktif audiens","type":"3"},{"name":"Pre-Launch","period":"1 minggu sebelum tayang","goal":"Dorong beli tiket","type":"4"},{"name":"Launch","period":"Minggu tayang","goal":"Maksimalkan penonton","type":"5"}]}
-Sesuaikan nilai di atas dengan data film. Balas hanya JSON.`;
-
-    const pCalendar = `Film Indonesia: ${filmInfo}. Durasi kampanye: ${dur}.
-Jawab HANYA JSON array "calendar" berisi 7 minggu (tanpa markdown):
-{"calendar":[{"week":"Minggu 1","phase":"Awareness","phaseType":"1","theme":"Perkenalan Film","monday":"Posting poster resmi","wednesday":"Quote karakter","friday":"Teaser 15 detik","saturday":"Poll story","platforms":["Instagram","TikTok"]},{"week":"Minggu 2","phase":"Awareness","phaseType":"1","theme":"Kenalan Karakter","monday":"Profil karakter","wednesday":"Behind the scenes","friday":"Thread X misteri","saturday":"Countdown","platforms":["X/Twitter","Instagram"]},{"week":"Minggu 3","phase":"Excitement","phaseType":"2","theme":"Drop Trailer","monday":"Trailer resmi rilis","wednesday":"Reaksi cast","friday":"TikTok challenge","saturday":"Live Q&A","platforms":["YouTube","TikTok"]},{"week":"Minggu 4","phase":"Engagement","phaseType":"3","theme":"Interaksi Fan","monday":"Fan art contest","wednesday":"Tebak adegan","friday":"UGC repost","saturday":"Hitung mundur","platforms":["Instagram","TikTok"]},{"week":"Minggu 5","phase":"Pre-Launch","phaseType":"4","theme":"Tiket Dibuka","monday":"Link tiket live","wednesday":"Review media","friday":"Red carpet sneak","saturday":"Last call story","platforms":["Instagram","X/Twitter"]},{"week":"Minggu 6","phase":"Launch","phaseType":"5","theme":"Hari Tayang","monday":"Hari pertama tayang","wednesday":"Testimonial penonton","friday":"Box office update","saturday":"Ucapan terima kasih","platforms":["Instagram","TikTok","YouTube"]},{"week":"Minggu 7","phase":"Launch","phaseType":"5","theme":"Momentum Tayang","monday":"Momen viral clip","wednesday":"Pencapaian penonton","friday":"Perpanjangan tayang","saturday":"Campaign wrap up","platforms":["Instagram","YouTube"]}]}
-Sesuaikan tema dan konten dengan film ini. Balas hanya JSON.`;
-
-    const pTips = `Genre film: ${genre}. Film: ${filmInfo}.
-Jawab HANYA JSON (tanpa markdown):
-{"tipsBoxOffice":[{"icon":"🎯","title":"Maksimalkan Opening Weekend","desc":"Fokus penuh 3 hari pertama, penentu perpanjangan jadwal bioskop"},{"icon":"📱","title":"Viral TikTok Organik","desc":"Buat sound atau challenge yang mudah ditiru untuk efek snowball"},{"icon":"🤝","title":"Micro Influencer Lokal","desc":"10 micro influencer lebih efektif dari 1 selebritis untuk komunitas"},{"icon":"🎟️","title":"Nonton Bareng Komunitas","desc":"Dorong group booking untuk isi kursi di hari weekday sepi"}]}
-Sesuaikan tips dengan genre film. Balas hanya JSON.`;
-
-    const pCaption = `Copywriter film Indonesia. Film: ${filmInfo}. Sinopsis: ${sinopsisShort}.
-Tulis 6 caption posting media sosial dalam Bahasa Indonesia. Format WAJIB persis ini:
-
-===1===
-PLATFORM: Instagram
-JUDUL: [judul]
-FASE: Awareness
-[caption dengan emoji dan hashtag]
-===END===
-===2===
-PLATFORM: TikTok
-JUDUL: [judul]
-FASE: Excitement
-[caption dengan emoji dan hashtag]
-===END===
-===3===
-PLATFORM: Instagram
-JUDUL: [judul]
-FASE: Pre-Launch
-[caption dengan emoji dan hashtag]
-===END===
-===4===
-PLATFORM: TikTok
-JUDUL: [judul]
-FASE: Launch
-[caption dengan emoji dan hashtag]
-===END===
-===5===
-PLATFORM: X/Twitter
-JUDUL: [judul]
-FASE: Engagement
-[caption maks 250 karakter dengan hashtag]
-===END===
-===6===
-PLATFORM: YouTube
-JUDUL: [judul]
-FASE: Launch
-[deskripsi video dengan hashtag]
-===END===`;
-
-    const parseCaption = (text) => {
-      const captions = [];
-      const blocks = text.split(/===\d+===/g).slice(1);
-      for (const block of blocks) {
-        const end = block.indexOf('===END===');
-        if (end === -1) continue;
-        const inner = block.substring(0, end).trim();
-        const lines = inner.split('\n');
-        let platform = '', title = '', phase = '', captionLines = [];
-        let inCaption = false;
-        for (const line of lines) {
-          if (line.startsWith('PLATFORM:')) platform = line.replace('PLATFORM:', '').trim();
-          else if (line.startsWith('JUDUL:')) title = line.replace('JUDUL:', '').trim();
-          else if (line.startsWith('FASE:')) { phase = line.replace('FASE:', '').trim(); inCaption = true; }
-          else if (inCaption && line.trim()) captionLines.push(line);
-        }
-        if (platform && title) captions.push({ platform, title, phase, caption: captionLines.join('\n').trim() });
-      }
-      return captions;
-    };
-
-    try {
-      const [rOv, rCal, rTips, rCap] = await Promise.all([
-        callAPI(pOverview),
-        callAPI(pCalendar),
-        callAPI(pTips),
-        callAPI(pCaption)
-      ]);
-
-      clearInterval(iv);
-      for (let i = 0; i < 5; i++) document.getElementById('s'+i).className = 'step-dot done';
-
-      const ovData   = safeJSON(rOv);
-      const calData  = safeJSON(rCal);
-      const tipsData = safeJSON(rTips);
-      const captions = parseCaption(rCap);
-
-      plan = {
-        overview:      ovData.overview  || { totalPosts: 28, platforms: ['Instagram','TikTok','X/Twitter','YouTube'], phases: 5, targetAudience: 'Penonton film Indonesia' },
-        phases:        ovData.phases    || [],
-        calendar:      calData.calendar || [],
-        captions:      captions.length  ? captions : [],
-        tipsBoxOffice: tipsData.tipsBoxOffice || []
+    // Simulasi pemrosesan AI / Data Generator
+    setTimeout(() => {
+      generatedPlan = {
+        overview: {
+          totalPosts: 24,
+          platforms: ['TikTok', 'Instagram', 'X (Twitter)'],
+          phases: 3,
+          targetAudience: 'Remaja, Dewasa Muda, Penggemar Novel/Sastra Populer'
+        },
+        phases: [
+          { name: "Fase 1: Nostalgia & Pengenalan Karakter", desc: `Menyoroti kembalinya Dilan di tahun 1997 dan dinamika hubungannya dengan Ancika. Memperkenalkan jajaran cast: ${cast || 'Pemain Utama'}.` },
+          { name: "Fase 2: Konflik & Ujian Hubungan", desc: "Mulai memicu diskusi publik mengenai datangnya orang ketiga dari masa lalu Dilan." },
+          { name: "Fase 3: Menuju Bioskop", desc: "Gencar melakukan hitung mundur, promosi tiket pre-sale, dan konten balik layar (behind the scenes)." }
+        ],
+        calendar: [
+          { week: "Minggu 1", phase: "Fase 1", theme: "Sapaan Karakter", schedule: "Senin & Kamis", platform: "TikTok, IG" },
+          { week: "Minggu 2", phase: "Fase 1", theme: "Behind the Scenes", schedule: "Selasa & Jumat", platform: "TikTok" },
+          { week: "Minggu 3", phase: "Fase 2", theme: "Teaser Konflik", schedule: "Rabu & Sabtu", platform: "X, IG" },
+          { week: "Minggu 4", phase: "Fase 3", theme: "Countdown Bioskop", schedule: "Setiap Hari", platform: "Semua Platform" }
+        ],
+        captions: [
+          `"Tahun 1997 jadi saksi perjalanan baru Dilan dan Ancika. Siap bertemu mereka di bioskop? 🏍️✨ #Dilan1997 #Ancika"`,
+          `"Saat masa lalu kembali menyapa, apakah cerita baru akan bertahan? Gimana menurut kalian penampilan ${cast ? cast.split(',')[0] : 'Dilan'} kali ini?"`
+        ],
+        tips: "Optimalkan konten interaktif berupa kuis atau jajak pendapat (polling) di Instagram Story mengenai kelanjutan kisah cinta masa lalu vs masa depan."
       };
 
-      document.getElementById('loadingSection').style.display = 'none';
-      renderResults(plan);
-    } catch(e) {
-      clearInterval(iv);
-      document.getElementById('loadingSection').style.display = 'none';
-      document.getElementById('formSection').style.display = 'block';
-      document.getElementById('errMsg').textContent = 'Gagal generate: ' + (e.message || 'Coba lagi.');
-      document.getElementById('errMsg').style.display = 'block';
-    }
-  }
-  function renderResults(p) {
-    const el = document.getElementById('resultsSection');
-    el.style.display = 'block';
-    const phases = (p.phases||[]).map(ph => `<div class="phase-item"><span class="pbadge ${phClass(ph.type)}">${ph.name}</span><div class="pinfo"><div class="pp">${ph.period}</div><div class="pg">${ph.goal}</div></div></div>`).join('');
-    const calRows = (p.calendar||[]).map(r => {
-      const days = [r.monday,r.wednesday,r.friday,r.saturday].filter(Boolean).join(' · ');
-      const ptags = (r.platforms||[]).map(pl => `<span class="ptag">${pl}</span>`).join('');
-      return `<tr><td style="font-weight:600;white-space:nowrap">${r.week||''}</td><td><span class="pbadge ${phClass(r.phaseType)}">${r.phase||''}</span></td><td>${r.theme||''}</td><td style="font-size:12px;color:var(--muted)">${days}</td><td>${ptags}</td></tr>`;
-    }).join('');
-    const captions = (p.captions||[]).map(c => {
-      const pc = platColors[c.platform]||{bg:'var(--surface2)',color:'var(--muted)'};
-      const safe = (c.caption||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      return `<div class="cap-card"><div class="cap-top"><div class="cap-meta"><span class="cap-plat" style="background:${pc.bg};color:${pc.color}">${c.platform||''}</span><span class="cap-name">${c.title||''}</span></div><button class="copy-btn" onclick="copyText(this,${JSON.stringify(c.caption||'')})">Copy</button></div><div class="cap-text">${safe}</div></div>`;
-    }).join('');
-    const tips = (p.tipsBoxOffice||[]).map(t => `<div class="tip-card"><div class="tip-icon">${t.icon||'🎯'}</div><div class="tip-title">${t.title||''}</div><div class="tip-desc">${t.desc||''}</div></div>`).join('');
-
-    el.innerHTML = `
-      <div class="result-header">
-        <div><div class="result-title">${meta.title}</div><div class="result-sub">${meta.genre} · Tayang ${meta.releaseFormatted}${meta.cast.length?' · '+meta.cast.join(', '):''}</div></div>
-        <span class="ready-badge">✓ Campaign Ready</span>
-      </div>
-      <div class="export-bar">
-        <button class="exp-btn primary" onclick="exportPDF()">⬇ Export PDF</button>
-        <button class="exp-btn secondary" onclick="printPlan()">🖨 Print / Save PDF</button>
-      </div>
-      <div class="rlabel">Ringkasan</div>
-      <div class="stats-row">
-        <div class="s-card"><div class="sn">${p.overview?.totalPosts||0}</div><div class="sl">Total Konten</div></div>
-        <div class="s-card"><div class="sn">${(p.overview?.platforms||[]).length}</div><div class="sl">Platform</div></div>
-        <div class="s-card"><div class="sn">${p.overview?.phases||0}</div><div class="sl">Fase</div></div>
-        <div class="s-card"><div class="sn" style="font-size:13px;padding-top:4px">${p.overview?.targetAudience||'-'}</div><div class="sl">Target Audiens</div></div>
-      </div>
-      <div class="rlabel">Fase Kampanye</div>
-      <div class="phases-list">${phases}</div>
-      <div class="rlabel">Konten Kalender</div>
-      <div class="cal-wrap"><table><thead><tr><th>Minggu</th><th>Fase</th><th>Tema</th><th>Jadwal Harian</th><th>Platform</th></tr></thead><tbody>${calRows}</tbody></table></div>
-      <div class="rlabel">Caption Siap Pakai</div>
-      <div class="captions-list">${captions}</div>
-      <div class="rlabel">Tips Box Office</div>
-      <div class="tips-grid">${tips}</div>
-      <div class="reset-row"><button class="exp-btn ghost" id="resetBtn">← Buat kampanye baru</button></div>`;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      renderResults();
+    }, 1500);
   }
 
-  function exportPDF() {
-    if (!plan || !window.jspdf) { printPlan(); return; }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pw = 210, ph = 297, ml = 15, mr = 15;
-    let y = 15;
-    const checkPage = (n) => { if (y + n > ph - 15) { doc.addPage(); y = 15; } };
-    doc.setFillColor(30,24,60); doc.rect(0,0,pw,36,'F');
-    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(17);
-    doc.text('Box Office Campaign Plan', ml, 16);
-    doc.setFont('helvetica','normal'); doc.setFontSize(10);
-    doc.text(`${meta.title}  ·  ${meta.genre}  ·  Tayang ${meta.releaseFormatted}`, ml, 24);
-    doc.setFontSize(8); doc.setTextColor(160,150,220);
-    doc.text(`Generated ${new Date().toLocaleDateString('id-ID')}`, pw-mr, 24, {align:'right'});
-    y = 46;
-    const sh = (txt) => { checkPage(12); doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(124,111,247); doc.text(txt.toUpperCase(), ml, y); y += 2; doc.setDrawColor(60,50,100); doc.line(ml, y+2, pw-mr, y+2); y += 7; };
-    const bw = (pw-ml-mr-9)/4;
-    const sv = [String(plan.overview?.totalPosts||0), String((plan.overview?.platforms||[]).length), String(plan.overview?.phases||0), plan.overview?.targetAudience||'-'];
-    const sl2 = ['Total Konten','Platform','Fase','Target Audiens'];
-    sv.forEach((v,i) => {
-      const bx = ml + i*(bw+3);
-      doc.setFillColor(30,25,55); doc.roundedRect(bx,y,bw,18,2,2,'F');
-      if (v.length > 5) { doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(200,195,255); doc.text(doc.splitTextToSize(v,bw-4), bx+bw/2, y+8, {align:'center'}); }
-      else { doc.setFontSize(14); doc.setFont('helvetica','bold'); doc.setTextColor(124,111,247); doc.text(v, bx+bw/2, y+11, {align:'center'}); }
-      doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(130,120,180);
-      doc.text(sl2[i], bx+bw/2, y+16, {align:'center'});
+  function renderResults() {
+    document.getElementById('loadingSection').style.display = 'none';
+    const resSec = document.getElementById('resultsSection');
+    resSec.style.display = 'block';
+
+    let phaseHtml = '';
+    generatedPlan.phases.forEach(p => {
+      phaseHtml += `<p><strong>${p.name}</strong>: ${p.desc}</p>`;
     });
-    y += 24;
-    const phc = {'1':[124,111,247],'2':[52,201,138],'3':[240,160,64],'4':[240,80,96],'5':[74,168,240]};
-    sh('Fase Kampanye');
-    (plan.phases||[]).forEach(p2 => { checkPage(12); const c = phc[p2.type]||[124,111,247]; doc.setFillColor(...c); doc.roundedRect(ml,y,28,5.5,1.5,1.5,'F'); doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255); doc.text(p2.name||'', ml+14, y+3.8, {align:'center'}); doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(130,120,180); doc.text(p2.period||'', ml+32, y+2.5); doc.setTextColor(220,215,240); const gl = doc.splitTextToSize(p2.goal||'', pw-ml-mr-34); doc.text(gl, ml+32, y+5.5); y += Math.max(10, gl.length*3.8+4); });
-    y += 4;
-    const cols = [22,30,50,57,36];
-    sh('Konten Kalender');
-    doc.setFillColor(25,20,50); doc.rect(ml,y,pw-ml-mr,7,'F'); doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(124,111,247);
-    let cx = ml; ['Minggu','Fase','Tema','Jadwal Harian','Platform'].forEach((h,i) => { doc.text(h,cx+2,y+4.8); cx+=cols[i]; }); y += 7;
-    (plan.calendar||[]).forEach((r,ri) => { const days = [r.monday,r.wednesday,r.friday,r.saturday].filter(Boolean).join(', '); const plat = (r.platforms||[]).join(', '); const tl = doc.splitTextToSize(r.theme||'', cols[2]-3); const dl = doc.splitTextToSize(days, cols[3]-3); const rh = Math.max(8, tl.length*3.8+3, dl.length*3.8+3); checkPage(rh+2); if (ri%2===0) { doc.setFillColor(20,18,38); doc.rect(ml,y,pw-ml-mr,rh,'F'); } cx = ml; doc.setFontSize(7.5); const c = phc[r.phaseType]||[124,111,247]; doc.setFont('helvetica','bold'); doc.setTextColor(200,200,220); doc.text(r.week||'',cx+2,y+5); cx+=cols[0]; doc.setFillColor(...c); doc.roundedRect(cx+1,y+1.5,cols[1]-3,5,1.5,1.5,'F'); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.text(doc.splitTextToSize(r.phase||'',cols[1]-5)[0],cx+2,y+5.2); cx+=cols[1]; doc.setTextColor(200,200,220); doc.setFont('helvetica','normal'); doc.text(tl,cx+2,y+4.5); cx+=cols[2]; doc.setTextColor(130,120,180); doc.text(dl,cx+2,y+4.5); cx+=cols[3]; doc.setTextColor(124,111,247); doc.text(doc.splitTextToSize(plat,cols[4]-3),cx+2,y+4.5); y += rh; doc.setDrawColor(35,30,60); doc.line(ml,y,pw-mr,y); });
-    y += 6;
-    sh('Caption Siap Pakai');
-    (plan.captions||[]).forEach(c => { const tl = doc.splitTextToSize(c.caption||'', pw-ml-mr-6); const cardH = tl.length*4+14; checkPage(cardH+4); doc.setFillColor(22,20,42); doc.roundedRect(ml,y,pw-ml-mr,cardH,3,3,'F'); doc.setDrawColor(70,60,140); doc.roundedRect(ml,y,pw-ml-mr,cardH,3,3,'S'); doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(124,111,247); doc.text(`${c.platform||''} · ${c.title||''}`, ml+4, y+6); doc.setFont('helvetica','normal'); doc.setTextColor(200,200,220); doc.text(tl, ml+4, y+12); y += cardH + 4; });
-    sh('Tips Box Office');
-    (plan.tipsBoxOffice||[]).forEach(t => { checkPage(14); doc.setFillColor(22,20,42); doc.roundedRect(ml,y,pw-ml-mr,12,2,2,'F'); doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(124,111,247); doc.text(t.title||'', ml+4, y+5); doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(160,150,200); const dl = doc.splitTextToSize(t.desc||'', pw-ml-mr-8); doc.text(dl, ml+4, y+9.5); y += Math.max(14, dl.length*3.8+7); });
-    const total = doc.internal.getNumberOfPages();
-    for (let pg = 1; pg <= total; pg++) { doc.setPage(pg); doc.setFillColor(30,24,60); doc.rect(0,ph-9,pw,9,'F'); doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(160,150,220); doc.text(`${meta.title} — Box Office Campaign Plan`, ml, ph-3.5); doc.text(`${pg} / ${total}`, pw-mr, ph-3.5, {align:'right'}); }
-    doc.save(`campaign-${meta.title.replace(/[^a-zA-Z0-9]/g,'-').toLowerCase()}.pdf`);
-  }
 
-  function printPlan() {
-    if (!plan) return;
-    const pc = phColors; const platC = platColors;
-    let phases = (plan.phases||[]).map(p2 => { const c = pc[p2.type]||pc['1']; return `<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;padding:8px;background:#f8f7ff;border-radius:8px"><span style="background:${c.bg};color:${c.color};padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap">${p2.name}</span><div><div style="font-size:11px;color:#888">${p2.period}</div><div style="font-size:12px">${p2.goal}</div></div></div>`; }).join('');
-    let calRows = (plan.calendar||[]).map(r => { const days = [r.monday,r.wednesday,r.friday,r.saturday].filter(Boolean).join(', '); const c = pc[r.phaseType]||pc['1']; return `<tr><td style="font-weight:600">${r.week||''}</td><td><span style="background:${c.bg};color:${c.color};padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${r.phase||''}</span></td><td>${r.theme||''}</td><td style="font-size:11px;color:#666">${days}</td><td style="font-size:11px">${(r.platforms||[]).join(', ')}</td></tr>`; }).join('');
-    let captions = (plan.captions||[]).map(c => { const pc2 = platC[c.platform]||{bg:'#f0f0ff',color:'#534AB7'}; return `<div style="border:1px solid #e0dff8;border-radius:8px;padding:12px;margin-bottom:10px;page-break-inside:avoid"><div style="margin-bottom:6px"><span style="background:${pc2.bg};color:${pc2.color};padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700">${c.platform||''}</span><span style="font-size:12px;color:#666;margin-left:6px">${c.title||''}</span></div><div style="font-size:12px;line-height:1.7;white-space:pre-wrap">${(c.caption||'').replace(/</g,'&lt;')}</div></div>`; }).join('');
-    let tips = (plan.tipsBoxOffice||[]).map(t => `<div style="background:#f8f7ff;border-radius:8px;padding:10px;page-break-inside:avoid"><div style="font-size:16px;margin-bottom:4px">${t.icon||''}</div><div style="font-weight:700;font-size:12px;color:#534AB7;margin-bottom:3px">${t.title||''}</div><div style="font-size:11px;color:#555;line-height:1.5">${t.desc||''}</div></div>`).join('');
-    const win = window.open('','_blank');
-    win.document.write(`<!DOCTYPE html><html><head><title>Campaign Plan — ${meta.title}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#222;font-size:13px}.hdr{background:#1e1838;color:#fff;padding:24px 32px}.hdr h1{font-size:20px;font-weight:700;margin-bottom:4px}.hdr p{font-size:12px;opacity:.75}.body{padding:24px 32px}.sec{margin-bottom:22px}.slbl{font-size:10px;font-weight:700;color:#888;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #eee}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}.stat{background:#f8f7ff;border-radius:8px;padding:12px;text-align:center}.stat .n{font-size:20px;font-weight:700;color:#534AB7}.stat .l{font-size:10px;color:#888;margin-top:2px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#f0effd;color:#3C3489;padding:6px 8px;text-align:left;font-size:11px}td{padding:6px 8px;border-bottom:1px solid #f0f0f0;vertical-align:top}.tips{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ftr{background:#1e1838;color:#a89cf7;padding:8px 32px;font-size:10px;display:flex;justify-content:space-between;margin-top:20px}@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}</style></head><body><div class="hdr"><h1>${meta.title}</h1><p>${meta.genre} · Tayang ${meta.releaseFormatted}${meta.cast.length?' · '+meta.cast.join(', '):''}</p><p style="margin-top:5px;opacity:.5;font-size:11px">Box Office Campaign Plan · ${new Date().toLocaleDateString('id-ID')}</p></div><div class="body"><div class="stats"><div class="stat"><div class="n">${plan.overview?.totalPosts||0}</div><div class="l">Total Konten</div></div><div class="stat"><div class="n">${(plan.overview?.platforms||[]).length}</div><div class="l">Platform</div></div><div class="stat"><div class="n">${plan.overview?.phases||0}</div><div class="l">Fase</div></div><div class="stat"><div class="n" style="font-size:12px;padding-top:4px">${plan.overview?.targetAudience||'-'}</div><div class="l">Target Audiens</div></div></div><div class="sec"><div class="slbl">Fase Kampanye</div>${phases}</div><div class="sec"><div class="slbl">Konten Kalender</div><table><thead><tr><th>Minggu</th><th>Fase</th><th>Tema</th><th>Jadwal Harian</th><th>Platform</th></tr></thead><tbody>${calRows}</tbody></table></div><div class="sec"><div class="slbl">Caption Siap Pakai</div>${captions}</div><div class="sec"><div class="slbl">Tips Box Office</div><div class="tips">${tips}</div></div></div><div class="ftr"><span>${meta.title} — Box Office Campaign Plan</span><span>${new Date().toLocaleDateString('id-ID')}</span></div><script>window.onload=()=>window.print()<\/script></body></html>`);
-    win.document.close();
-  }
-
-  function resetApp() { document.getElementById('resultsSection').style.display='none'; document.getElementById('resultsSection').innerHTML=''; document.getElementById('formSection').style.display='block'; plan=null; window.scrollTo({top:0,behavior:'smooth'}); }
-
-  // Attach all event listeners (CSP-safe)
-  document.addEventListener('DOMContentLoaded', function() {
-    // Add cast button
-    document.getElementById('addCastBtn').addEventListener('click', addCast);
-    // Generate button
-    document.getElementById('genBtn').addEventListener('click', generate);
-    // Duration buttons
-    document.querySelectorAll('.dur-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() { setDur(this, this.dataset.dur); });
+    let calRows = '';
+    generatedPlan.calendar.forEach(c => {
+      calRows += `<tr><td>${c.week}</td><td>${c.phase}</td><td>${c.theme}</td><td>${c.schedule}</td><td>${c.platform}</td></tr>`;
     });
-    // First cast row remove button
-    var firstRm = document.querySelector('.cast-row .rm');
-    if (firstRm) firstRm.addEventListener('click', function() { removeCast(this); });
-  });
+
+    let captionHtml = '';
+    generatedPlan.captions.forEach(cap => {
+      captionHtml += `<blockquote style="background:var(--surface2); padding:12px; margin-bottom:8px; border-left:4px solid var(--primary); font-style:italic;">${cap}</blockquote>`;
+    });
+
+    resSec.innerHTML = `
+      <div class="output-header">
+        <div class="output-title">${metaData.title}</div>
+        <p style="color: var(--muted)">Tanggal Rilis: ${metaData.releaseDate}</p>
+        <p style="color: var(--muted); font-size: 0.9rem; margin-top: 4px;"><strong>Cast:</strong> ${metaData.cast || '-'}</p>
+      </div>
+      
+      <div class="sec-title">🎯 Ringkasan Strategi</div>
+      <p>Target Audiens: ${generatedPlan.overview.targetAudience}</p>
+      
+      <div class="sec-title">🎬 Fase Kampanye</div>
+      ${phaseHtml}
+      
+      <div class="sec-title">📅 Kalender Konten</div>
+      <table>
+        <thead>
+          <tr><th>Minggu</th><th>Fase</th><th>Tema</th><th>Jadwal</th><th>Platform</th></tr>
+        </thead>
+        <tbody>${calRows}</tbody>
+      </table>
+      
+      <div class="sec-title">✍️ Contoh Caption Siap Pakai</div>
+      ${captionHtml}
+      
+      <div class="sec-title">💡 Tips Tambahan</div>
+      <p>${generatedPlan.tips}</p>
+
+      <div class="btn-group">
+        <button class="btn btn-secondary" onclick="resetApp()">Reset Form</button>
+        <button class="btn" onclick="window.print()">Cetak / Simpan PDF</button>
+      </div>
+    `;
+  }
+
+  function resetApp() {
+    document.getElementById('resultsSection').style.display = 'none';
+    document.getElementById('movieTitle').value = '';
+    document.getElementById('movieSynopsis').value = '';
+    document.getElementById('movieCast').value = ''; // Reset input pemain
+    document.getElementById('releaseDate').value = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 </script>
+
 </body>
 </html>
