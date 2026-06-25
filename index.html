@@ -107,6 +107,23 @@ tr:hover td { background: rgba(255,255,255,.02); }
 .type-grid .btn-sec { padding: 12px 14px; text-align: left; display: flex; flex-direction: column; gap: 3px; }
 .type-hint { font-size: 0.72rem; color: var(--muted); font-weight: 400; }
 .rtype.active .type-hint { color: rgba(209,161,83,0.7); }
+
+/* New parameter grids */
+.param-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.budget-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.param.btn-sec { padding: 10px 12px; text-align: left; display: flex; flex-direction: column; gap: 2px; border-radius: var(--radius-sm); transition: all 0.15s; }
+.param-icon { font-size: 1.1rem; line-height: 1; margin-bottom: 2px; }
+.param-label { font-size: 0.82rem; font-weight: 600; color: var(--text); line-height: 1.2; }
+.param-hint { font-size: 0.7rem; color: var(--muted); font-weight: 400; line-height: 1.3; }
+.param.active { border-color: var(--gold) !important; background: rgba(209,161,83,0.08) !important; }
+.param.active .param-label { color: var(--gold); }
+.param.active .param-hint { color: rgba(209,161,83,0.6); }
+.param:hover { border-color: var(--border2); background: var(--surface2); }
+
+@media(max-width:600px) {
+  .param-grid { grid-template-columns: repeat(2, 1fr); }
+  .budget-grid { grid-template-columns: 1fr; }
+}
 .dur-grid .btn-sec { padding: 9px 6px; font-size: 0.82rem; text-align: center; }
 .cal-wrap { overflow-x: auto; }
 .err { color: var(--red); font-size: 0.875rem; margin-top: 8px; display: none; }
@@ -171,6 +188,166 @@ tr:hover td { background: rgba(255,255,255,.02); }
       <input type="text" id="movieCast" placeholder="Contoh: Abun Sungkar, Callista Arum" />
     </div>
     <div class="form-group">
+      <label>Target Audiens</label>
+      <div class="param-grid">
+        <button class="btn-sec param audience active" data-key="audience" data-val="general" type="button">
+          <span class="param-icon">🌐</span>
+          <span class="param-label">General</span>
+          <span class="param-hint">AI tentukan sendiri sesuai film</span>
+        </button>
+        <button class="btn-sec param audience" data-key="audience" data-val="genz" type="button">
+          <span class="param-icon">⚡</span>
+          <span class="param-label">Gen Z</span>
+          <span class="param-hint">TikTok · Meme · Hook 3 detik</span>
+        </button>
+        <button class="btn-sec param audience" data-key="audience" data-val="milenial" type="button">
+          <span class="param-icon">💫</span>
+          <span class="param-label">Milenial</span>
+          <span class="param-hint">Nostalgia · Relatabilitas · X/Twitter</span>
+        </button>
+        <button class="btn-sec param audience" data-key="audience" data-val="cinephile" type="button">
+          <span class="param-icon">🎞️</span>
+          <span class="param-label">Cinephile</span>
+          <span class="param-hint">Estetik · Teori · BTS analog</span>
+        </button>
+        <button class="btn-sec param audience" data-key="audience" data-val="mass" type="button">
+          <span class="param-icon">🌍</span>
+          <span class="param-label">Mass Audience</span>
+          <span class="param-hint">Emosi · Keluarga · Ramah semua umur</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Tone of Voice Akun</label>
+      <div class="param-grid">
+        <button class="btn-sec param tone active" data-key="tone" data-val="general" type="button">
+          <span class="param-icon">🌐</span>
+          <span class="param-label">General</span>
+          <span class="param-hint">AI sesuaikan dengan genre & mood</span>
+        </button>
+        <button class="btn-sec param tone" data-key="tone" data-val="witty" type="button">
+          <span class="param-icon">😏</span>
+          <span class="param-label">Witty & Sarcastic</span>
+          <span class="param-hint">Lucu, nge-troll, nimbrung tren</span>
+        </button>
+        <button class="btn-sec param tone" data-key="tone" data-val="cryptic" type="button">
+          <span class="param-icon">🌑</span>
+          <span class="param-label">Cryptic & Artistic</span>
+          <span class="param-hint">Misterius, estetik, penuh teka-teki</span>
+        </button>
+        <button class="btn-sec param tone" data-key="tone" data-val="hype" type="button">
+          <span class="param-icon">🔥</span>
+          <span class="param-label">Hype & Pop-Culture</span>
+          <span class="param-hint">Energetik, emoji, kultur pop</span>
+        </button>
+        <button class="btn-sec param tone" data-key="tone" data-val="bts" type="button">
+          <span class="param-icon">🎬</span>
+          <span class="param-label">BTS & Journalistic</span>
+          <span class="param-hint">Proses syuting, wawancara, fakta</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Core Mood / Emosi Film</label>
+      <div class="param-grid">
+        <button class="btn-sec param mood active" data-key="mood" data-val="general" type="button">
+          <span class="param-icon">🌐</span>
+          <span class="param-label">General</span>
+          <span class="param-hint">AI baca dari sinopsis & genre</span>
+        </button>
+        <button class="btn-sec param mood" data-key="mood" data-val="mencekam" type="button">
+          <span class="param-icon">😱</span>
+          <span class="param-label">Mencekam</span>
+          <span class="param-hint">Paranoia · Horor · Thriller</span>
+        </button>
+        <button class="btn-sec param mood" data-key="mood" data-val="nostalgia" type="button">
+          <span class="param-icon">🌅</span>
+          <span class="param-label">Hangat & Nostalgia</span>
+          <span class="param-hint">Romansa · Keluarga · Heartwarming</span>
+        </button>
+        <button class="btn-sec param mood" data-key="mood" data-val="mindbending" type="button">
+          <span class="param-icon">🌀</span>
+          <span class="param-label">Mind-bending</span>
+          <span class="param-hint">Plot twist · Teori · Rewatch value</span>
+        </button>
+        <button class="btn-sec param mood" data-key="mood" data-val="adrenalin" type="button">
+          <span class="param-icon">⚡</span>
+          <span class="param-label">Adrenalin</span>
+          <span class="param-hint">Aksi · Seru · Memacu semangat</span>
+        </button>
+        <button class="btn-sec param mood" data-key="mood" data-val="sad" type="button">
+          <span class="param-icon">💔</span>
+          <span class="param-label">Sad & Menguras</span>
+          <span class="param-hint">Drama berat · Sad ending · Katarsis</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Skala Budget Kampanye</label>
+      <div class="budget-grid" style="grid-template-columns: repeat(4, 1fr)">
+        <button class="btn-sec param budget active" data-key="budget" data-val="general" type="button">
+          <span class="param-icon">🌐</span>
+          <span class="param-label">General</span>
+          <span class="param-hint">AI mix semua pendekatan</span>
+        </button>
+        <button class="btn-sec param budget" data-key="budget" data-val="low" type="button">
+          <span class="param-icon">🌱</span>
+          <span class="param-label">Low Budget</span>
+          <span class="param-hint">100% Organik — TikTok, Reels, Thread, CapCut template</span>
+        </button>
+        <button class="btn-sec param budget" data-key="budget" data-val="medium" type="button">
+          <span class="param-icon">🚀</span>
+          <span class="param-label">Medium Budget</span>
+          <span class="param-hint">Organik + Micro/Macro KOL + Live session</span>
+        </button>
+        <button class="btn-sec param budget" data-key="budget" data-val="high" type="button">
+          <span class="param-icon">💎</span>
+          <span class="param-label">High Budget</span>
+          <span class="param-hint">Event Gala Premiere + CGI FOOH + Brand integration</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Hook Utama / USP Film</label>
+      <div class="param-grid">
+        <button class="btn-sec param usp active" data-key="usp" data-val="general" type="button">
+          <span class="param-icon">🌐</span>
+          <span class="param-label">General</span>
+          <span class="param-hint">AI temukan hook terbaik dari film</span>
+        </button>
+        <button class="btn-sec param usp" data-key="usp" data-val="plottwist" type="button">
+          <span class="param-icon">🔄</span>
+          <span class="param-label">Plot Twist Gila</span>
+          <span class="param-hint">Ending tak terduga · Teori fandom</span>
+        </button>
+        <button class="btn-sec param usp" data-key="usp" data-val="visual" type="button">
+          <span class="param-icon">🎨</span>
+          <span class="param-label">Visual & Estetik</span>
+          <span class="param-hint">Sinematografi indah · Color grading</span>
+        </button>
+        <button class="btn-sec param usp" data-key="usp" data-val="based" type="button">
+          <span class="param-icon">📖</span>
+          <span class="param-label">Based on True Story</span>
+          <span class="param-hint">Kisah nyata · Adaptasi buku terkenal</span>
+        </button>
+        <button class="btn-sec param usp" data-key="usp" data-val="soundtrack" type="button">
+          <span class="param-icon">🎵</span>
+          <span class="param-label">Soundtrack Ikonik</span>
+          <span class="param-hint">Musik viral · Audio trend TikTok</span>
+        </button>
+        <button class="btn-sec param usp" data-key="usp" data-val="cast" type="button">
+          <span class="param-icon">⭐</span>
+          <span class="param-label">Star Power Cast</span>
+          <span class="param-hint">Aktor populer · Fanbase besar</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="form-group">
       <label>Durasi Kampanye</label>
       <div class="dur-grid">
         <button class="btn-sec dur active" data-val="1" data-days="7">1 Minggu</button>
@@ -206,6 +383,13 @@ const WORKER_URL = 'https://campaign-plannergr.emilkwikku001.workers.dev';
 let dur = 1; // weeks
 let durDays = 7;
 let releaseType = 'bioskop'; // 'bioskop' | 'ott'
+let params = {
+  audience: 'general',
+  tone: 'general',
+  mood: 'general',
+  budget: 'general',
+  usp: 'general'
+};
 let plan = null;
 let meta = {};
 
@@ -248,6 +432,17 @@ function setReleaseType(btn) {
   } else {
     showOTTHint(false);
   }
+}
+
+function setParam(btn) {
+  const key = btn.dataset.key;
+  const val = btn.dataset.val;
+  // Deactivate siblings
+  document.querySelectorAll('.param.' + key).forEach(b => {
+    b.classList.remove('active');
+  });
+  btn.classList.add('active');
+  params[key] = val;
 }
 
 function showOTTHint(show) {
@@ -371,8 +566,63 @@ async function generate() {
 
   const film = title + ' | ' + genre + ' | ' + relFmt + (cast ? ' | ' + cast : '');
   const isOTT = releaseType === 'ott';
+
+  // Build rich context strings from params
+  const audienceCtx = {
+    general:  'Semua kalangan penonton Indonesia — AI menentukan pendekatan terbaik berdasarkan genre, sinopsis, dan tipe rilis film',
+    genz:     'Gen Z/Alpha (usia 15-24) — fokus TikTok, hook visual 3 detik pertama, meme-able, audio trend, CapCut-friendly, bahasa gaul ringan',
+    milenial: 'Milenial (usia 25-35) — fokus X/Twitter thread, nostalgia angle, relabilitas kehidupan dewasa, Instagram carousel informatif',
+    cinephile:'Cinephiles & Film Buffs — fokus estetika sinematografi, teori film, behind-the-scenes analog, diskusi mendalam, konten berkelas',
+    mass:     'Mass Audience / Keluarga — fokus emosi universal, mudah dimengerti semua umur, heartwarming, tidak terlalu niche'
+  }[params.audience] || 'Penonton umum Indonesia';
+
+  const toneCtx = {
+    general:  'Tone fleksibel — AI menyesuaikan gaya komunikasi yang paling efektif berdasarkan genre dan target film',
+    witty:   'Witty & Sarcastic ala admin Netflix — lucu, berani nge-troll, sering nimbrung di tren viral, caption pendek mengejutkan, banyak humor',
+    cryptic: 'Cryptic & Artistic ala A24 — misterius, estetik, puitis, minim teks, penuh teka-teki, memancing interpretasi, visual first',
+    hype:    'Hype & Pop-Culture — energetik, banyak emoji, referensi pop culture kekinian, FOMO-inducing, shareable, loud dan fun',
+    bts:     'Behind-The-Scenes Journalistic — fokus proses pembuatan, wawancara cast/sutradara, fakta menarik, konten edukatif tentang film'
+  }[params.tone] || 'Natural dan engaging';
+
+  const moodCtx = {
+    general:  'Mood campuran — AI membaca emosi dominan dari sinopsis dan genre untuk menentukan pendekatan konten',
+    mencekam:    'Mencekam/Paranoia — bangun rasa tidak nyaman, gunakan silence & tension, cryptic imagery, teaser menyeramkan, curiosity gap',
+    nostalgia:   'Hangat/Nostalgia — tone emosional, warna warm, musik melankolis, memories & kebersamaan, bikin penonton merasa terhubung',
+    mindbending: 'Mind-bending/Plot Twist — tease tanpa spoiler, dorong teori di komentar, multiple interpretation content, rewatch value tinggi',
+    adrenalin:   'Adrenalin/Action — fast cuts, energetic music, hype build-up, countdown intens, konten yang bikin detak jantung naik',
+    sad:         'Sad/Menguras Emosi — relatable heartbreak, quote-able dialog sedih, trigger nostalgia dan kenangan, emotional investment'
+  }[params.mood] || 'Engaging dan berkesan';
+
+  const budgetCtx = {
+    general:  'Budget fleksibel — AI membuat mix konten organik dan berbayar yang sesuai skala umum promosi film Indonesia',
+    low:    'Low Budget (100% Organik) — prioritaskan TikTok organic, Reels, Twitter/X thread, CapCut template gratis, UGC, audio trends. JANGAN suggest paid ads, CGI FOOH, atau event besar',
+    medium: 'Medium Budget — gabungkan konten organik dengan 3-5 micro/macro KOL, Live session interaktif, branded filter IG/TikTok, sesi nonton bareng komunitas',
+    high:   'High Budget — termasuk CGI Fake Out-of-Home (FOOH) viral, Gala Premiere event, mystery box ke top influencer, brand integration, paid promotion masif'
+  }[params.budget] || 'Organik';
+
+  const uspCtx = {
+    general:  'Hook utama — AI mengidentifikasi sendiri USP terkuat dari sinopsis, genre, dan elemen film untuk dijadikan sudut promosi',
+    plottwist:  'USP: Plot Twist Gila — jangan spoil tapi hint adanya twist besar, dorong teori di komentar, "tidak ada yang bisa menebak endingnya"',
+    visual:     'USP: Visual & Sinematografi Memukau — tonjolkan color grading, shot komposisi indah, estetika visual yang Instagram-worthy',
+    based:      'USP: Based on True Story/Adaptasi Buku Terkenal — leverage existing fanbase, konten edukatif tentang kisah aslinya, nostalgia pembaca buku',
+    soundtrack: 'USP: Soundtrack Ikonik — rilis potongan audio sebagai official TikTok sound, dorong kreator pakai musik film untuk konten mereka',
+    cast:       'USP: Star Power Cast — leverage fanbase aktor, konten in-character, chemistry cast, behind-scenes momen personal'
+  }[params.usp] || 'Konten film berkualitas';
+
   const releaseCtx = isOTT
-    ? 'TIPE RILIS: OTT/Streaming (film sudah pernah tayang di bioskop, sekarang hadir di platform streaming). Strategi: re-engagement penonton lama + akuisisi penonton baru yang belum sempat nonton. Tone: "Sekarang bisa nonton di rumah". Fokus: convenience, aksesibilitas, binge-watch.'
+    ? 'TIPE: OTT/Streaming — film sudah pernah tayang di bioskop, kini hadir di platform streaming. Strategi: re-engagement penonton lama + akuisisi baru. Tone: convenience, nonton dari rumah, binge-watch. JANGAN mention beli tiket bioskop.'
+    : 'TIPE: Bioskop/Theatrical Premiere — tayang perdana. Strategi: build hype maksimal, FOMO opening weekend, dorong beli tiket. Tone: "pengalaman sinema yang tidak bisa dilewatkan".';
+
+  // Master context untuk semua prompt
+  const masterCtx = 'TARGET AUDIENS: ' + audienceCtx + '.\n'
+    + 'TONE OF VOICE: ' + toneCtx + '.\n'
+    + 'MOOD FILM: ' + moodCtx + '.\n'
+    + 'BUDGET: ' + budgetCtx + '.\n'
+    + 'HOOK UTAMA: ' + uspCtx + '.\n'
+    + releaseCtx;
+  // isOTT and releaseCtx now handled in masterCtx above
+  const _skip = isOTT
+    ? 'skip (film sudah pernah tayang di bioskop, sekarang hadir di platform streaming). Strategi: re-engagement penonton lama + akuisisi penonton baru yang belum sempat nonton. Tone: "Sekarang bisa nonton di rumah". Fokus: convenience, aksesibilitas, binge-watch.'
     : 'TIPE RILIS: Bioskop (premiere/tayang perdana). Strategi: build hype maksimal, dorong beli tiket, ciptakan FOMO opening weekend. Tone: "Harus nonton di bioskop". Fokus: pengalaman sinema, opening weekend, prestige.';
   const syn  = synopsis.length > 150 ? synopsis.substring(0, 150) + '...' : synopsis;
   const days = durDays;
@@ -423,6 +673,7 @@ async function generate() {
       const exPhase = getPhase(d1);
       const prompt = 'Content planner film: ' + film + '. ' + (isOTT ? 'OTT streaming — tone santai, dorong nonton di rumah sekarang.' : 'Bioskop — tone hype/FOMO, dorong beli tiket.') + '\n'
         + 'Buat jadwal H' + d1 + ' sampai H' + d2 + '. Tiap hari 2 item beda platform.\n'
+        + 'Treatment harus spesifik & viral: Hook/teaser, Meme/relatable, BTS, Teori, Countdown, atau Pop-culture angle. Tone: ' + toneCtx.substring(0,50) + '.\n'
         + 'Format SINGKAT — jawab HANYA JSON array:\n'
         + '[{"d":' + d1 + ',"p":"' + exPhase + '","a":{"pl":"TikTok","t":"Video","ti":"[judul 4 kata]","tr":"[brief 6 kata]"},"b":{"pl":"Instagram","t":"Carousel","ti":"[judul 4 kata]","tr":"[brief 6 kata]"}}]\n'
         + 'Lanjutkan sampai d=' + d2 + '. Variasikan platform (Instagram/TikTok/X/YouTube) dan type (Video/Carousel/Story/Reels/Thread). Sesuaikan fase: ' + getPhase(d1) + ' ke ' + getPhase(d2) + '. JSON only.';
@@ -461,14 +712,20 @@ async function generate() {
 
     // CALL LAST: 4 captions plain text
     setProgress(80, 'Menulis caption...');
-    const rCap = await callAPI(
-      'Copywriter film. Film: ' + film + '. Sinopsis: ' + syn + '.\n'
-      + (isOTT ? 'Tipe rilis OTT — caption harus menonjolkan kemudahan nonton dari rumah, bukan ajakan ke bioskop.\n' : 'Tipe rilis Bioskop — caption harus ciptakan FOMO dan dorong nonton di bioskop.\n')
-      + 'Tulis 4 caption Bahasa Indonesia. Format:\n'
-      + '===1===\nPLATFORM: Instagram\nJUDUL: [judul]\nFASE: Awareness\n[caption+hashtag]\n===END===\n'
-      + '===2===\nPLATFORM: TikTok\nJUDUL: [judul]\nFASE: Excitement\n[caption+hashtag]\n===END===\n'
-      + '===3===\nPLATFORM: X/Twitter\nJUDUL: [judul]\nFASE: Pre-Launch\n[maks 250 char+hashtag]\n===END===\n'
-      + '===4===\nPLATFORM: YouTube\nJUDUL: [judul]\nFASE: Launch\n[deskripsi+hashtag]\n===END===',
+    const rCap = await callAPI(      'Kamu adalah Senior Copywriter Social Media untuk film Indonesia, dengan gaya gabungan Netflix (witty, pop-culture) dan A24 (estetik, kriptik).\n'
+      + 'Film: ' + film + '. Sinopsis: ' + syn + '.\n'
+      + 'WAJIB ikuti FORMULA VIRALITAS ini:\n'
+      + '1. HOOK 3 DETIK PERTAMA: buka dengan visual ganjil, curiosity gap, atau pertanyaan yang memancing.\n'
+      + '2. POP-CULTURE HIJACKING: kaitkan elemen film dengan kehidupan sehari-hari yang relatable.\n'
+      + '3. IMMERSIVE: jangan terlihat seperti jualan, perluas universe film, bikin penonton merasa bagian dari cerita.\n'
+      + '4. REWATCH VALUE: akhiri dengan twist, pertanyaan, atau teori yang memancing komentar & diskusi.\n'
+      + masterCtx + '\n'
+      + 'Tulis 4 caption Bahasa Indonesia SESUAI tone ' + toneCtx.substring(0, 40) + '. Format:\n'
+      + '===1===\nPLATFORM: Instagram\nJUDUL: [judul]\nFASE: Awareness\n[caption formula viral+hashtag]\n===END===\n'
+      + '===2===\nPLATFORM: TikTok\nJUDUL: [judul]\nFASE: Excitement\n[caption hook 3 detik+hashtag]\n===END===\n'
+      + '===3===\nPLATFORM: X/Twitter\nJUDUL: [judul]\nFASE: Pre-Launch\n[maks 250 char, cryptic/witty+hashtag]\n===END===\n'
+      + '===4===\nPLATFORM: YouTube\nJUDUL: [judul]\nFASE: Launch\n[deskripsi immersive+hashtag]\n===END===',
+
       'Menulis caption...'
     );
     const captions = parseCaption(rCap);
@@ -568,7 +825,13 @@ function renderResults() {
     + '<div class="card">'
     + '<div class="out-header">'
     + '<div><div class="out-title">' + meta.title + '</div>'
-    + '<div class="out-meta">' + (releaseType === 'ott' ? '📺 OTT · ' : '🎬 Bioskop · ') + meta.genre + ' · Tayang ' + meta.releaseFormatted + (meta.cast?' · '+meta.cast:'') + '</div></div>'
+    + '<div class="out-meta">' + (releaseType === 'ott' ? '📺 OTT · ' : '🎬 Bioskop · ') + meta.genre + ' · Tayang ' + meta.releaseFormatted + (meta.cast?' · '+meta.cast:'') + '</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">'
+    + '<span style="font-size:0.7rem;padding:2px 8px;border-radius:20px;background:rgba(209,161,83,.12);color:var(--gold)">' + params.audience.toUpperCase() + '</span>'
+    + '<span style="font-size:0.7rem;padding:2px 8px;border-radius:20px;background:rgba(209,161,83,.12);color:var(--gold)">' + params.tone.toUpperCase() + '</span>'
+    + '<span style="font-size:0.7rem;padding:2px 8px;border-radius:20px;background:rgba(209,161,83,.12);color:var(--gold)">' + params.mood.toUpperCase() + '</span>'
+    + '<span style="font-size:0.7rem;padding:2px 8px;border-radius:20px;background:rgba(209,161,83,.12);color:var(--gold)">' + params.budget.toUpperCase() + ' BUDGET</span>'
+    + '</div></div>'
     + '<span class="ready">✓ Campaign Ready</span>'
     + '</div>'
     + '<div class="stats-row">'
@@ -740,6 +1003,10 @@ function exportPDF() {
 // Init event listeners
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('genBtn').addEventListener('click', generate);
+  document.querySelectorAll('.param').forEach(btn => {
+    btn.addEventListener('click', function() { setParam(this); });
+  });
+
   document.querySelectorAll('.rtype').forEach(btn => {
     btn.addEventListener('click', function() { setReleaseType(this); });
   });
