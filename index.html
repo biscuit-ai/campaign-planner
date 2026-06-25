@@ -1,167 +1,572 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="light">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Campaign Planner — Box Office Film Strategy</title>
-<meta name="description" content="Generator strategi konten film Indonesia berbasis AI. Masukkan data film, dapatkan kampanye lengkap siap Box Office." />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CampaignPlanner — Box Office Film Strategy</title>
+<meta name="description" content="AI-powered content campaign planner untuk film Indonesia. Generate strategi konten lengkap siap Box Office."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
+/* ── RESET & BASE ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── TOKENS: LIGHT (default) ── */
 :root {
-  --bg: #0b0c10;
-  --surface: #13141a;
-  --surface2: #1a1b23;
-  --border: rgba(255,255,255,0.08);
-  --border2: rgba(255,255,255,0.14);
-  --text: #f0f0f4;
-  --muted: #888899;
-  --gold: #d1a153;
-  --gold-hover: #bfa043;
-  --green: #4eefb2;
-  --red: #ff5c5c;
-  --radius: 12px;
-  --radius-sm: 8px;
+  --bg:           #F7F7F5;
+  --surface:      #FFFFFF;
+  --surface2:     #F0F0EE;
+  --border:       rgba(0,0,0,0.07);
+  --border2:      rgba(0,0,0,0.12);
+  --text:         #2C2C2B;
+  --muted:        #6B6B67;
+  --primary:      #2D4B3E;
+  --primary-soft: rgba(45,75,62,0.08);
+  --primary-mid:  rgba(45,75,62,0.18);
+  --accent:       #B07D62;
+  --accent-soft:  rgba(176,125,98,0.10);
+  --green:        #2D4B3E;
+  --red:          #BA1A1A;
+  --gold:         #B07D62;
+  --radius:       16px;
+  --radius-sm:    12px;
+  --radius-pill:  9999px;
+  --shadow:       0 4px 24px -4px rgba(45,75,62,0.10);
+  --shadow-lg:    0 10px 40px -10px rgba(45,75,62,0.12);
 }
-body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; line-height: 1.6; padding: 40px 20px; display: flex; justify-content: center; }
-.container { width: 100%; max-width: 820px; }
-header { margin-bottom: 40px; text-align: center; }
-header h1 { font-family: 'Sora', sans-serif; font-size: 2.4rem; color: #fff; margin-bottom: 8px; }
-header p { color: var(--muted); font-size: 1rem; }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; margin-bottom: 24px; }
-.form-group { margin-bottom: 20px; }
-label { display: block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; color: var(--muted); }
-label .opt { font-weight: 400; text-transform: none; letter-spacing: 0; color: #555; }
-input[type="text"], input[type="date"], textarea, select {
-  width: 100%; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 13px 16px; color: #fff;
-  font-family: 'Inter', sans-serif; font-size: 0.95rem; transition: border-color 0.2s;
-  -webkit-appearance: none; appearance: none;
+
+/* ── DARK MODE ── */
+html.dark {
+  --bg:           #0b0c10;
+  --surface:      #13141a;
+  --surface2:     #1a1b23;
+  --border:       rgba(255,255,255,0.08);
+  --border2:      rgba(255,255,255,0.14);
+  --text:         #f0f0f4;
+  --muted:        #888899;
+  --primary:      #d1a153;
+  --primary-soft: rgba(209,161,83,0.10);
+  --primary-mid:  rgba(209,161,83,0.20);
+  --accent:       #d1a153;
+  --accent-soft:  rgba(209,161,83,0.10);
+  --green:        #34c98a;
+  --red:          #f05060;
+  --gold:         #d1a153;
+  --shadow:       0 4px 24px -4px rgba(0,0,0,0.4);
+  --shadow-lg:    0 10px 40px -10px rgba(0,0,0,0.5);
 }
-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888899' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
-input:focus, textarea:focus, select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(209,161,83,0.15); }
-textarea { resize: vertical; min-height: 110px; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.btn { background: var(--gold); color: #000; border: none; border-radius: var(--radius-sm); padding: 15px 24px; font-size: 1rem; font-weight: 700; cursor: pointer; width: 100%; margin-top: 8px; transition: background 0.2s; font-family: 'Inter', sans-serif; }
-.btn:hover { background: var(--gold-hover); }
-.btn:disabled { background: #333; color: #666; cursor: not-allowed; }
-#loadingSection { display: none; text-align: center; padding: 48px 20px; }
-.loader { width: 40px; height: 40px; border: 2px solid var(--border2); border-top-color: var(--gold); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 16px; }
+
+html, body { height: 100%; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  transition: background 0.3s, color 0.3s;
+  overflow-x: hidden;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: 68px;
+  background: rgba(247,247,245,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2.5rem;
+  transition: background 0.3s;
+}
+html.dark nav { background: rgba(11,12,16,0.85); }
+.nav-logo { font-family: 'Sora', sans-serif; font-size: 1.15rem; font-weight: 700; color: var(--primary); text-decoration: none; letter-spacing: -0.02em; }
+.nav-right { display: flex; align-items: center; gap: 10px; }
+.nav-hist-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: var(--radius-pill);
+  background: var(--primary-soft); border: 1px solid var(--primary-mid);
+  color: var(--primary); font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+}
+.nav-hist-btn:hover { background: var(--primary-mid); }
+.theme-toggle {
+  width: 38px; height: 38px; border-radius: var(--radius-pill);
+  background: var(--surface2); border: 1px solid var(--border2);
+  cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.theme-toggle:hover { background: var(--primary-soft); }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: 100px 1.5rem 4rem;
+}
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--primary-soft); border: 1px solid var(--primary-mid);
+  color: var(--primary); padding: 6px 16px; border-radius: var(--radius-pill);
+  font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; margin-bottom: 1.5rem;
+}
+.hero h1 {
+  font-family: 'Sora', sans-serif;
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
+  font-weight: 800; line-height: 1.1; letter-spacing: -0.03em;
+  margin-bottom: 1rem; color: var(--text);
+}
+.hero h1 em { font-style: normal; color: var(--primary); }
+.hero p { font-size: 1.05rem; color: var(--muted); max-width: 460px; margin: 0 auto 2.5rem; line-height: 1.75; }
+.hero-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--primary); color: var(--surface);
+  padding: 14px 32px; border-radius: var(--radius-pill);
+  font-size: 1rem; font-weight: 700; text-decoration: none; border: none;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  box-shadow: 0 8px 24px -6px var(--primary-mid);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+html.dark .hero-cta { color: #0b0c10; }
+.hero-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 32px -8px var(--primary-mid); }
+.hero-stats { display: flex; gap: 2.5rem; margin-top: 3.5rem; justify-content: center; flex-wrap: wrap; }
+.hero-stat .n { font-family: 'Sora', sans-serif; font-size: 2rem; font-weight: 800; color: var(--primary); letter-spacing: -0.03em; }
+.hero-stat .l { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+/* ── LAYOUT ── */
+.container { max-width: 860px; margin: 0 auto; padding: 0 1.5rem; }
+section { padding: 5rem 0; }
+
+/* ── FEATURES ── */
+.feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; margin-top: 2.5rem; }
+.feat-card {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 1.5rem; box-shadow: var(--shadow);
+  border: 1px solid var(--border); transition: transform 0.2s, box-shadow 0.2s;
+}
+.feat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+.feat-icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
+.feat-card h3 { font-family: 'Sora', sans-serif; font-size: 0.9rem; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+.feat-card p { font-size: 0.8rem; color: var(--muted); line-height: 1.6; }
+.sec-eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--primary); margin-bottom: 6px; }
+.sec-title { font-family: 'Sora', sans-serif; font-size: clamp(1.5rem, 2.5vw, 2rem); font-weight: 700; margin-bottom: 0.75rem; letter-spacing: -0.02em; }
+.sec-sub { color: var(--muted); font-size: 1rem; max-width: 500px; line-height: 1.7; }
+
+/* ── FORM ── */
+#app { scroll-margin-top: 80px; }
+.form-card {
+  background: var(--surface); border-radius: 24px;
+  padding: 2.5rem; box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border); margin-top: 2rem;
+}
+.fg { display: flex; flex-direction: column; gap: 7px; margin-bottom: 1.5rem; }
+.fg:last-of-type { margin-bottom: 0; }
+.fg label {
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.fg label .opt { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.fg input, .fg select, .fg textarea {
+  background: var(--surface2); border: 1.5px solid transparent;
+  border-radius: var(--radius-sm); padding: 13px 16px;
+  color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.95rem;
+  width: 100%; transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+.fg select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B6B67' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
+}
+html.dark .fg select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888899' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+.fg input:focus, .fg select:focus, .fg textarea:focus {
+  outline: none; border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.fg textarea { resize: vertical; min-height: 100px; line-height: 1.65; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+
+/* ── PILL PARAM BUTTONS ── */
+.pill-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill {
+  padding: 8px 18px; border-radius: var(--radius-pill);
+  background: var(--surface2); border: 1.5px solid var(--border2);
+  color: var(--muted); font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  transition: all 0.15s; white-space: nowrap;
+}
+.pill:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+.pill.active { background: var(--primary); border-color: var(--primary); color: var(--surface); font-weight: 700; }
+html.dark .pill.active { color: #0b0c10; }
+
+/* ── BUDGET PILLS — 3 wide ── */
+.budget-pill-group { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.budget-pill {
+  padding: 12px 10px; border-radius: var(--radius-sm);
+  background: var(--surface2); border: 1.5px solid var(--border2);
+  color: var(--muted); font-size: 0.78rem; font-weight: 600;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  transition: all 0.15s; text-align: left;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.budget-pill .bp-icon { font-size: 1rem; }
+.budget-pill .bp-name { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+.budget-pill .bp-hint { font-size: 0.7rem; color: var(--muted); line-height: 1.4; }
+.budget-pill:hover, .budget-pill.active { border-color: var(--primary); }
+.budget-pill.active { background: var(--primary-soft); }
+.budget-pill.active .bp-name { color: var(--primary); }
+
+/* ── TIMING ── */
+.timing-group { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.timing-btn {
+  padding: 12px; border-radius: var(--radius-sm);
+  background: var(--surface2); border: 1.5px solid var(--border2);
+  color: var(--muted); font-size: 0.78rem; font-weight: 600;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  text-align: left; display: flex; flex-direction: column; gap: 2px;
+  transition: all 0.15s;
+}
+.timing-btn .t-icon { font-size: 1rem; margin-bottom: 2px; }
+.timing-btn .t-label { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+.timing-btn .t-hint { font-size: 0.68rem; color: var(--muted); }
+.timing-btn.active { border-color: var(--primary); background: var(--primary-soft); }
+.timing-btn.active .t-label { color: var(--primary); }
+.timing-btn.disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+
+/* ── RELEASE TYPE ── */
+.rtype-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rtype-btn {
+  padding: 14px 16px; border-radius: var(--radius-sm);
+  background: var(--surface2); border: 1.5px solid var(--border2);
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  text-align: left; display: flex; flex-direction: column; gap: 3px;
+  transition: all 0.15s;
+}
+.rtype-btn .rt-icon { font-size: 1.1rem; }
+.rtype-btn .rt-name { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+.rtype-btn .rt-hint { font-size: 0.7rem; color: var(--muted); }
+.rtype-btn.active { border-color: var(--primary); background: var(--primary-soft); }
+.rtype-btn.active .rt-name { color: var(--primary); }
+
+/* ── DUR GRID ── */
+.dur-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
+.dur-btn {
+  padding: 9px 4px; border-radius: var(--radius-pill);
+  background: var(--surface2); border: 1.5px solid var(--border2);
+  color: var(--muted); font-size: 0.78rem; font-weight: 600;
+  cursor: pointer; font-family: 'Inter', sans-serif; text-align: center;
+  transition: all 0.15s;
+}
+.dur-btn.active { background: var(--primary); border-color: var(--primary); color: var(--surface); }
+html.dark .dur-btn.active { color: #0b0c10; }
+
+/* ── GENERATE BTN ── */
+.gen-btn {
+  width: 100%; padding: 17px; background: var(--primary); color: var(--surface);
+  border: none; border-radius: var(--radius-pill); font-size: 1rem; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: 'Inter', sans-serif; margin-top: 1.5rem;
+  box-shadow: 0 8px 24px -6px var(--primary-mid);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+html.dark .gen-btn { color: #0b0c10; }
+.gen-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px -8px var(--primary-mid); }
+.err { color: var(--red); font-size: 0.82rem; margin-top: 8px; display: none; }
+.helper-text { font-size: 0.75rem; color: var(--muted); margin-top: 5px; }
+
+/* ── SECTION DIVIDER ── */
+.form-section-title {
+  font-family: 'Sora', sans-serif; font-size: 0.85rem; font-weight: 700;
+  color: var(--primary); letter-spacing: -0.01em; margin-bottom: 1rem; margin-top: 2rem;
+  display: flex; align-items: center; gap: 8px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.form-section-title:first-child { margin-top: 0; }
+
+/* ── LOADING ── */
+#loadingSection {
+  display: none; text-align: center; padding: 5rem 1rem;
+  background: var(--surface); border-radius: 24px;
+  border: 1px solid var(--border); box-shadow: var(--shadow-lg);
+  margin-top: 2rem;
+}
+.loader {
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 2px solid var(--border2); border-top-color: var(--primary);
+  animation: spin .7s linear infinite; margin: 0 auto 1.5rem;
+}
 @keyframes spin { to { transform: rotate(360deg); } }
-.load-title { font-family: 'Sora', sans-serif; font-size: 1.1rem; margin-bottom: 6px; }
-.load-sub { color: var(--muted); font-size: 0.9rem; }
-.steps { display: flex; flex-direction: column; gap: 8px; max-width: 260px; margin: 20px auto 0; text-align: left; }
-.step { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--muted); }
-.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border2); flex-shrink: 0; transition: background 0.3s; }
-.dot.on { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
-.dot.done { background: var(--green); }
-#resultsSection { display: none; }
-.out-header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.out-title { font-family: 'Sora', sans-serif; font-size: 1.8rem; color: #fff; }
-.out-meta { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
-.ready { display: inline-flex; align-items: center; gap: 6px; background: rgba(78,239,178,0.1); border: 1px solid rgba(78,239,178,0.25); color: var(--green); padding: 5px 13px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
-.sec-title { color: var(--gold); font-size: 1.05rem; font-family: 'Sora', sans-serif; margin: 28px 0 12px; }
-.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 10px; margin-bottom: 4px; }
-.stat { background: var(--surface2); border-radius: var(--radius-sm); padding: 14px; text-align: center; }
-.stat .n { font-family: 'Sora', sans-serif; font-size: 1.6rem; font-weight: 700; color: var(--gold); }
-.stat .l { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
-.phase-list { display: flex; flex-direction: column; gap: 10px; }
-.phase-item { background: var(--surface2); border-radius: var(--radius-sm); padding: 14px; display: flex; gap: 12px; align-items: flex-start; }
-.ph-badge { padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
-.ph1 { background: rgba(209,161,83,.18); color: #d1a153; }
-.ph2 { background: rgba(78,239,178,.12); color: #4eefb2; }
-.ph3 { background: rgba(255,120,80,.12); color: #ff7850; }
-.ph4 { background: rgba(120,160,255,.12); color: #78a0ff; }
-.ph5 { background: rgba(220,120,255,.12); color: #dc78ff; }
-.ph-period { font-size: 0.8rem; color: var(--muted); }
-.ph-goal { font-size: 0.9rem; margin-top: 2px; }
-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-th { background: var(--surface2); color: var(--muted); padding: 10px 12px; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--border); }
-td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(255,255,255,.02); }
-.ptag { display: inline-block; padding: 2px 7px; background: var(--surface2); border-radius: 5px; font-size: 0.75rem; color: var(--muted); margin: 1px; }
-.cap-card { background: var(--surface2); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 10px; border-left: 3px solid var(--gold); }
-.cap-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.cap-plat { font-size: 0.75rem; font-weight: 700; padding: 2px 9px; border-radius: 20px; }
-.cap-name { font-size: 0.8rem; color: var(--muted); }
-.cap-text { font-size: 0.875rem; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
-.copy-btn { float: right; background: none; border: 1px solid var(--border2); border-radius: 6px; padding: 3px 10px; font-size: 0.75rem; color: var(--muted); cursor: pointer; font-family: 'Inter', sans-serif; transition: all .15s; }
-.copy-btn:hover { color: #fff; border-color: var(--gold); }
-.copy-btn.ok { color: var(--green); border-color: var(--green); }
-.tips-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 10px; }
-.tip { background: var(--surface2); border-radius: var(--radius-sm); padding: 14px; }
-.tip-icon { font-size: 1.3rem; margin-bottom: 6px; }
-.tip-title { font-size: 0.875rem; font-weight: 600; margin-bottom: 4px; }
-.tip-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
-.btn-group { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
-.btn-group .btn { margin-top: 0; }
-.btn-sec { background: transparent; border: 1px solid var(--border2); color: #fff; font-weight: 600; border-radius: var(--radius-sm); padding: 12px 20px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.9rem; flex: 1; transition: background .15s; }
-.btn-sec:hover { background: var(--surface2); }
-.dur-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.dur-grid .btn-sec { padding: 9px 6px; font-size: 0.82rem; text-align: center; }
-.type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.type-grid .btn-sec { padding: 12px 14px; text-align: left; display: flex; flex-direction: column; gap: 3px; }
-.type-hint { font-size: 0.72rem; color: var(--muted); font-weight: 400; }
-.rtype.active .type-hint { color: rgba(209,161,83,0.7); }
+.load-title { font-family: 'Sora', sans-serif; font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; }
+.load-sub { font-size: 0.875rem; color: var(--muted); }
+.progress-wrap { width: 100%; max-width: 300px; height: 4px; background: var(--border2); border-radius: 99px; margin: 1.5rem auto 6px; overflow: hidden; }
+.progress-bar { height: 100%; background: var(--primary); border-radius: 99px; transition: width 0.5s ease; }
+.load-hint { font-size: 0.72rem; color: var(--muted); opacity: 0.6; }
 
-/* New parameter grids */
-.param-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
-.budget-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.param.btn-sec { padding: 10px 12px; text-align: left; display: flex; flex-direction: column; gap: 2px; border-radius: var(--radius-sm); transition: all 0.15s; }
-.param-icon { font-size: 1.1rem; line-height: 1; margin-bottom: 2px; }
-.param-label { font-size: 0.82rem; font-weight: 600; color: var(--text); line-height: 1.2; }
-.param-hint { font-size: 0.7rem; color: var(--muted); font-weight: 400; line-height: 1.3; }
-.param.active { border-color: var(--gold) !important; background: rgba(209,161,83,0.08) !important; }
-.param.active .param-label { color: var(--gold); }
-.param.active .param-hint { color: rgba(209,161,83,0.6); }
-.param:hover { border-color: var(--border2); background: var(--surface2); }
-
-@media(max-width:600px) {
-  .param-grid { grid-template-columns: repeat(2, 1fr); }
-  .budget-grid { grid-template-columns: 1fr; }
-  .timing-grid { grid-template-columns: 1fr; }
+/* ── RESULTS ── */
+#resultsSection { display: none; margin-top: 2rem; }
+.result-card { background: var(--surface); border-radius: 24px; padding: 2.5rem; box-shadow: var(--shadow-lg); border: 1px solid var(--border); }
+.result-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }
+.result-title { font-family: 'Sora', sans-serif; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
+.result-meta { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+.ready-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(45,75,62,0.08); border: 1px solid rgba(45,75,62,0.2);
+  color: var(--primary); padding: 6px 14px; border-radius: var(--radius-pill);
+  font-size: 0.75rem; font-weight: 700;
 }
-.timing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.timing.btn-sec { padding: 10px 12px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
-.timing-icon { font-size: 1.1rem; line-height: 1; margin-bottom: 2px; }
-.timing-label { font-size: 0.82rem; font-weight: 600; }
-.timing-hint { font-size: 0.7rem; color: var(--muted); font-weight: 400; }
-.timing.active { border-color: var(--gold) !important; background: rgba(209,161,83,0.08) !important; }
-.timing.active .timing-label { color: var(--gold); }
-.timing.active .timing-hint { color: rgba(209,161,83,0.6); }
-.timing.disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
-.dur-grid .btn-sec { padding: 9px 6px; font-size: 0.82rem; text-align: center; }
-.cal-wrap { overflow-x: auto; }
-.err { color: var(--red); font-size: 0.875rem; margin-top: 8px; display: none; }
-.progress-wrap { width: 100%; max-width: 320px; height: 6px; background: var(--border); border-radius: 10px; margin: 16px auto 8px; overflow: hidden; }
-.progress-bar { height: 100%; background: var(--gold); border-radius: 10px; transition: width 0.5s ease; }
-.load-hint { font-size: 0.75rem; color: var(--muted); margin-top: 8px; opacity: 0.6; }
-@media(max-width:600px) { .form-row { grid-template-columns: 1fr; } header h1 { font-size: 1.8rem; } }
+html.dark .ready-badge { background: rgba(52,201,138,0.1); border-color: rgba(52,201,138,0.25); color: #34c98a; }
+
+/* ── STATS ROW ── */
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px,1fr)); gap: 1rem; margin-bottom: 0; }
+.stat-card {
+  background: var(--surface2); border-radius: var(--radius);
+  padding: 1.25rem; text-align: center;
+  border: 1px solid var(--border);
+}
+.stat-card .sn { font-family: 'Sora', sans-serif; font-size: 1.6rem; font-weight: 800; color: var(--primary); letter-spacing: -0.03em; }
+.stat-card .sl { font-size: 0.7rem; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ── RLABEL ── */
+.rlabel {
+  font-size: 0.7rem; font-weight: 700; color: var(--muted);
+  letter-spacing: .1em; text-transform: uppercase;
+  margin-bottom: 0.75rem; margin-top: 2rem;
+  display: flex; align-items: center; gap: 8px;
+}
+.rlabel::after { content:''; flex:1; height:1px; background: var(--border); }
+
+/* ── PHASE CARDS ── */
+.phase-list { display: flex; flex-direction: column; gap: 10px; }
+.phase-item {
+  background: var(--surface2); border-radius: var(--radius-sm);
+  padding: 1rem 1.25rem; display: flex; gap: 12px; align-items: flex-start;
+  border: 1px solid var(--border);
+}
+.ph-badge { padding: 3px 12px; border-radius: var(--radius-pill); font-size: 0.72rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; margin-top: 3px; }
+.ph1 { background: rgba(45,75,62,0.1); color: #2D4B3E; }
+html.dark .ph1 { background: rgba(209,161,83,0.15); color: #d1a153; }
+.ph2 { background: rgba(176,125,98,0.1); color: #B07D62; }
+html.dark .ph2 { background: rgba(78,200,140,0.12); color: #4ec88c; }
+.ph3 { background: rgba(107,142,35,0.1); color: #6B8E23; }
+html.dark .ph3 { background: rgba(255,120,80,0.12); color: #ff7850; }
+.ph4 { background: rgba(45,75,62,0.06); color: #2D4B3E; }
+html.dark .ph4 { background: rgba(120,160,255,0.12); color: #78a0ff; }
+.ph5 { background: rgba(176,125,98,0.08); color: #B07D62; }
+html.dark .ph5 { background: rgba(220,120,255,0.12); color: #dc78ff; }
+.ph-period { font-size: 0.78rem; color: var(--muted); }
+.ph-goal { font-size: 0.88rem; margin-top: 2px; }
+
+/* ── CALENDAR TABLE ── */
+.cal-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); }
+table { width: 100%; border-collapse: collapse; font-size: 0.875rem; min-width: 560px; }
+thead th {
+  background: var(--surface2); padding: 12px 14px; text-align: left;
+  font-size: 0.68rem; font-weight: 700; color: var(--muted);
+  letter-spacing: .07em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+tbody td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--surface2); }
+.ptag { display: inline-block; padding: 2px 8px; background: var(--surface2); border-radius: var(--radius-pill); font-size: 0.7rem; color: var(--muted); margin: 1px; border: 1px solid var(--border); }
+
+/* ── CAPTION CARDS ── */
+.captions-list { display: flex; flex-direction: column; gap: 12px; }
+.cap-card {
+  background: var(--surface2); border-radius: var(--radius);
+  padding: 1.25rem; border: 1px solid var(--border);
+  transition: box-shadow 0.2s;
+}
+.cap-card:hover { box-shadow: var(--shadow); }
+.cap-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
+.cap-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cap-plat { font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: var(--radius-pill); }
+.cap-name { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+.copy-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius-pill); padding: 5px 12px;
+  font-size: 0.72rem; font-weight: 600; color: var(--muted);
+  cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; white-space: nowrap;
+}
+.copy-btn:hover { color: var(--primary); border-color: var(--primary); }
+.copy-btn.ok { color: var(--green); border-color: var(--green); }
+.cap-text { font-size: 0.875rem; line-height: 1.75; white-space: pre-wrap; word-break: break-word; }
+
+/* ── TIPS ── */
+.tips-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px,1fr)); gap: 10px; }
+.tip-card {
+  background: var(--surface2); border-radius: var(--radius);
+  padding: 1.25rem; border: 1px solid var(--border);
+}
+.tip-icon { font-size: 1.4rem; margin-bottom: 8px; }
+.tip-title { font-family: 'Sora', sans-serif; font-size: 0.875rem; font-weight: 700; margin-bottom: 4px; }
+.tip-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.6; }
+
+/* ── RESULT ACTIONS ── */
+.result-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 0; }
+.act-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 20px; border-radius: var(--radius-pill);
+  font-size: 0.82rem; font-weight: 700; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: all 0.15s;
+  border: 1.5px solid var(--border2); background: var(--surface2);
+  color: var(--text);
+}
+.act-btn:hover { background: var(--surface); box-shadow: var(--shadow); }
+.act-btn.primary { background: var(--primary); border-color: var(--primary); color: var(--surface); }
+html.dark .act-btn.primary { color: #0b0c10; }
+.act-btn.primary:hover { box-shadow: 0 8px 24px -6px var(--primary-mid); transform: translateY(-1px); }
+.act-btn.save { border-color: var(--primary-mid); color: var(--primary); background: var(--primary-soft); }
+.act-btn.danger { border-color: rgba(186,26,26,0.2); color: var(--red); background: rgba(186,26,26,0.06); }
+
+/* ── NOTES DISPLAY ── */
+.notes-display {
+  margin-top: 10px; padding: 10px 14px;
+  background: var(--primary-soft); border: 1px solid var(--primary-mid);
+  border-radius: var(--radius-sm); font-size: 0.78rem;
+}
+.notes-display strong { color: var(--primary); font-weight: 700; }
+
+/* ── HISTORY MODAL ── */
+#historyModal {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+  overflow-y: auto; padding: 2rem 1rem;
+}
+.history-inner {
+  max-width: 820px; margin: 0 auto;
+  background: var(--surface); border-radius: 24px;
+  padding: 2rem; box-shadow: var(--shadow-lg);
+}
+.history-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);
+}
+.history-title { font-family: 'Sora', sans-serif; font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+.hist-close {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: var(--radius-pill); padding: 7px 16px;
+  font-size: 0.82rem; color: var(--muted); cursor: pointer;
+  font-family: 'Inter', sans-serif;
+}
+.hist-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1rem;
+  transition: box-shadow 0.2s;
+}
+.hist-card:hover { box-shadow: var(--shadow); }
+.hist-title { font-family: 'Sora', sans-serif; font-size: 1.05rem; font-weight: 700; margin-bottom: 3px; }
+.hist-meta { font-size: 0.78rem; color: var(--muted); }
+.hist-badges { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; }
+.hist-badge {
+  font-size: 0.68rem; font-weight: 600; padding: 3px 10px;
+  border-radius: var(--radius-pill); background: var(--surface);
+  border: 1px solid var(--border2); color: var(--muted);
+}
+.hist-stats { display: flex; gap: 1.5rem; margin: 12px 0; }
+.hist-stat .n { font-family: 'Sora', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--primary); }
+.hist-stat .l { font-size: 0.68rem; color: var(--muted); }
+.hist-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.hist-btn {
+  padding: 7px 16px; border-radius: var(--radius-pill);
+  font-size: 0.78rem; font-weight: 700; cursor: pointer;
+  font-family: 'Inter', sans-serif; border: 1.5px solid var(--border2);
+  background: var(--surface); color: var(--text); transition: all 0.15s;
+}
+.hist-btn.primary { background: var(--primary); border-color: var(--primary); color: var(--surface); }
+html.dark .hist-btn.primary { color: #0b0c10; }
+.hist-btn.danger { border-color: rgba(186,26,26,0.2); color: var(--red); margin-left: auto; }
+.hist-empty { text-align: center; padding: 3rem; color: var(--muted); }
+.hist-empty .e-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+.hist-empty .e-title { font-family: 'Sora', sans-serif; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+
+/* ── FOOTER ── */
+footer {
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: 3rem 2.5rem; text-align: center;
+}
+.footer-logo { font-family: 'Sora', sans-serif; font-size: 1rem; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+.footer-copy { font-size: 0.78rem; color: var(--muted); }
+
+/* ── RESPONSIVE ── */
+@media(max-width:640px) {
+  .form-row { grid-template-columns: 1fr; }
+  .dur-grid { grid-template-columns: repeat(4,1fr); }
+  .timing-group { grid-template-columns: 1fr; }
+  .rtype-group { grid-template-columns: 1fr; }
+  nav { padding: 0 1.25rem; }
+  .form-card { padding: 1.5rem; }
+  .result-card { padding: 1.5rem; }
+}
 </style>
 </head>
 <body>
-<div class="container">
-  <header>
-    <h1>🎬 Campaign Planner</h1>
-    <p>Box Office Film Strategy Generator — Powered by AI</p>
-  </header>
 
-  <div id="formSection" class="card">
-    <div class="form-group">
-      <label for="movieTitle">Judul Film</label>
-      <input type="text" id="movieTitle" placeholder="Contoh: 3726 MDPL" />
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#">✦ CampaignPlanner</a>
+  <div class="nav-right">
+    <button class="nav-hist-btn" id="navHistBtn" style="display:none" onclick="showHistory()">📚 <span id="navHistCount">0</span> Tersimpan</button>
+    <button class="theme-toggle" id="themeToggle" title="Toggle dark/light mode">🌙</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Campaign <em>Planner</em></h1>
+  <p>Dari ide ke kalender konten — semua yang dibutuhkan tim marketing film dalam satu tempat.</p>
+  <a href="#app" class="hero-cta">Mulai Sekarang ↓</a>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="n">30</div><div class="l">Hari Konten</div></div>
+    <div class="hero-stat"><div class="n">4</div><div class="l">Platform</div></div>
+    <div class="hero-stat"><div class="n">PDF</div><div class="l">Export Premium</div></div>
+    <div class="hero-stat"><div class="n">∞</div><div class="l">Sesuai Budget</div></div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<div class="container">
+<section>
+  <div class="sec-eyebrow">Fitur Unggulan</div>
+  <div class="sec-title">Satu tool, strategi sekelas studio Hollywood</div>
+  <div class="feat-grid">
+    <div class="feat-card"><div class="feat-icon">📅</div><h3>Daily Content Calendar</h3><p>Jadwal konten per hari dengan type, platform, dan treatment detail.</p></div>
+    <div class="feat-card"><div class="feat-icon">🎯</div><h3>Strategi Konten Viral</h3><p>Formula konten: Hook kuat, pendekatan pop-culture, dan storytelling yang immersive.</p></div>
+    <div class="feat-card"><div class="feat-icon">✍️</div><h3>Caption Siap Pakai</h3><p>Copy per platform dengan hashtag — Instagram, TikTok, X, YouTube.</p></div>
+    <div class="feat-card"><div class="feat-icon">📄</div><h3>Export PDF Premium</h3><p>Dokumen profesional siap presentasi ke produser atau tim marketing.</p></div>
+  </div>
+</section>
+</div>
+
+<!-- FORM -->
+<div class="container">
+<section id="app">
+  <div class="sec-eyebrow">Generator</div>
+  <div class="sec-title">Masukkan data film kamu</div>
+  <p class="sec-sub">Semakin lengkap data yang diisi, semakin spesifik dan akurat strategi yang dihasilkan.</p>
+
+  <div class="form-card" id="formSection">
+
+    <div class="form-section-title">🎬 Data Film</div>
+
+    <div class="fg">
+      <label>Judul Film <span style="color:var(--red)">*</span></label>
+      <input type="text" id="movieTitle" placeholder="Contoh: 3726 MDPL" autocomplete="off"/>
     </div>
-    <div class="form-group">
-      <label for="movieSynopsis">Sinopsis</label>
-      <textarea id="movieSynopsis" placeholder="Ceritakan singkat tentang film ini..."></textarea>
+    <div class="fg">
+      <label>Sinopsis <span style="color:var(--red)">*</span></label>
+      <textarea id="movieSynopsis" placeholder="Ceritakan singkat tentang film ini — karakter utama, konflik, dan hook yang bikin penonton penasaran..."></textarea>
     </div>
     <div class="form-row">
-      <div class="form-group">
-        <label for="movieGenre">Genre</label>
+      <div class="fg">
+        <label>Genre <span style="color:var(--red)">*</span></label>
         <select id="movieGenre">
           <option value="">Pilih genre...</option>
           <option>Drama Romansa</option>
@@ -174,271 +579,192 @@ tr:hover td { background: rgba(255,255,255,.02); }
           <option>Biografi</option>
         </select>
       </div>
-      <div class="form-group">
-        <label for="releaseDate">Tanggal Tayang</label>
-        <input type="date" id="releaseDate" />
+      <div class="fg">
+        <label>Tanggal Tayang <span style="color:var(--red)">*</span></label>
+        <input type="date" id="releaseDate"/>
       </div>
     </div>
-    <div class="form-group">
+    <div class="fg">
+      <label>Pemain Utama & Sutradara <span class="opt">(opsional)</span></label>
+      <input type="text" id="movieCast" placeholder="Contoh: Abun Sungkar, Callista Arum · Sutradara: Edwin"/>
+    </div>
+
+    <div class="form-section-title">🎯 Tipe & Strategi Rilis</div>
+
+    <div class="fg">
       <label>Tipe Rilis</label>
-      <div class="type-grid">
-        <button class="btn-sec rtype active" data-val="bioskop" type="button">
-          🎬 Bioskop
-          <span class="type-hint">Premiere · Build hype panjang</span>
+      <div class="rtype-group">
+        <button class="rtype-btn active" id="rtypeBioskop" data-val="bioskop" type="button">
+          <span class="rt-icon">🎬</span>
+          <span class="rt-name">Bioskop / Theatrical</span>
+          <span class="rt-hint">Premiere · Build hype panjang · FOMO tiket</span>
         </button>
-        <button class="btn-sec rtype" data-val="ott" type="button">
-          📺 OTT / Streaming
-          <span class="type-hint">Re-engagement · Kampanye singkat</span>
+        <button class="rtype-btn" id="rtypeOTT" data-val="ott" type="button">
+          <span class="rt-icon">📺</span>
+          <span class="rt-name">OTT / Streaming</span>
+          <span class="rt-hint">Re-engagement · Kampanye singkat · Nonton di rumah</span>
         </button>
       </div>
     </div>
 
-    <div class="form-group">
-      <label for="movieCast">Pemain Utama <span class="opt">(opsional)</span></label>
-      <input type="text" id="movieCast" placeholder="Contoh: Abun Sungkar, Callista Arum" />
-    </div>
-    <div class="form-group">
+    <div class="form-section-title">👥 Target & Karakter Konten</div>
+
+    <div class="fg">
       <label>Target Audiens</label>
-      <div class="param-grid">
-        <button class="btn-sec param audience active" data-key="audience" data-val="general" type="button">
-          <span class="param-icon">🌐</span>
-          <span class="param-label">General</span>
-          <span class="param-hint">AI tentukan sendiri sesuai film</span>
-        </button>
-        <button class="btn-sec param audience" data-key="audience" data-val="genz" type="button">
-          <span class="param-icon">⚡</span>
-          <span class="param-label">Gen Z</span>
-          <span class="param-hint">TikTok · Meme · Hook 3 detik</span>
-        </button>
-        <button class="btn-sec param audience" data-key="audience" data-val="milenial" type="button">
-          <span class="param-icon">💫</span>
-          <span class="param-label">Milenial</span>
-          <span class="param-hint">Nostalgia · Relatabilitas · X/Twitter</span>
-        </button>
-        <button class="btn-sec param audience" data-key="audience" data-val="cinephile" type="button">
-          <span class="param-icon">🎞️</span>
-          <span class="param-label">Cinephile</span>
-          <span class="param-hint">Estetik · Teori · BTS analog</span>
-        </button>
-        <button class="btn-sec param audience" data-key="audience" data-val="mass" type="button">
-          <span class="param-icon">🌍</span>
-          <span class="param-label">Mass Audience</span>
-          <span class="param-hint">Emosi · Keluarga · Ramah semua umur</span>
-        </button>
+      <div class="pill-group" id="audienceGroup">
+        <button class="pill audience active" data-key="audience" data-val="general" type="button">🌐 General</button>
+        <button class="pill audience" data-key="audience" data-val="genz" type="button">⚡ Gen Z</button>
+        <button class="pill audience" data-key="audience" data-val="milenial" type="button">💫 Milenial</button>
+        <button class="pill audience" data-key="audience" data-val="cinephile" type="button">🎞️ Cinephile</button>
+        <button class="pill audience" data-key="audience" data-val="mass" type="button">🌍 Mass Audience</button>
       </div>
     </div>
-
-    <div class="form-group">
-      <label>Tone of Voice Akun</label>
-      <div class="param-grid">
-        <button class="btn-sec param tone active" data-key="tone" data-val="general" type="button">
-          <span class="param-icon">🌐</span>
-          <span class="param-label">General</span>
-          <span class="param-hint">AI sesuaikan dengan genre & mood</span>
-        </button>
-        <button class="btn-sec param tone" data-key="tone" data-val="witty" type="button">
-          <span class="param-icon">😏</span>
-          <span class="param-label">Witty & Sarcastic</span>
-          <span class="param-hint">Lucu, nge-troll, nimbrung tren</span>
-        </button>
-        <button class="btn-sec param tone" data-key="tone" data-val="cryptic" type="button">
-          <span class="param-icon">🌑</span>
-          <span class="param-label">Cryptic & Artistic</span>
-          <span class="param-hint">Misterius, estetik, penuh teka-teki</span>
-        </button>
-        <button class="btn-sec param tone" data-key="tone" data-val="hype" type="button">
-          <span class="param-icon">🔥</span>
-          <span class="param-label">Hype & Pop-Culture</span>
-          <span class="param-hint">Energetik, emoji, kultur pop</span>
-        </button>
-        <button class="btn-sec param tone" data-key="tone" data-val="bts" type="button">
-          <span class="param-icon">🎬</span>
-          <span class="param-label">BTS & Journalistic</span>
-          <span class="param-hint">Proses syuting, wawancara, fakta</span>
-        </button>
+    <div class="fg">
+      <label>Tone of Voice</label>
+      <div class="pill-group" id="toneGroup">
+        <button class="pill tone active" data-key="tone" data-val="general" type="button">🌐 General</button>
+        <button class="pill tone" data-key="tone" data-val="witty" type="button">😏 Witty & Sarcastic</button>
+        <button class="pill tone" data-key="tone" data-val="cryptic" type="button">🌑 Cryptic & Artistic</button>
+        <button class="pill tone" data-key="tone" data-val="hype" type="button">🔥 Hype & Pop-Culture</button>
+        <button class="pill tone" data-key="tone" data-val="bts" type="button">🎬 BTS & Journalistic</button>
       </div>
     </div>
-
-    <div class="form-group">
+    <div class="fg">
       <label>Core Mood / Emosi Film</label>
-      <div class="param-grid">
-        <button class="btn-sec param mood active" data-key="mood" data-val="general" type="button">
-          <span class="param-icon">🌐</span>
-          <span class="param-label">General</span>
-          <span class="param-hint">AI baca dari sinopsis & genre</span>
-        </button>
-        <button class="btn-sec param mood" data-key="mood" data-val="mencekam" type="button">
-          <span class="param-icon">😱</span>
-          <span class="param-label">Mencekam</span>
-          <span class="param-hint">Paranoia · Horor · Thriller</span>
-        </button>
-        <button class="btn-sec param mood" data-key="mood" data-val="nostalgia" type="button">
-          <span class="param-icon">🌅</span>
-          <span class="param-label">Hangat & Nostalgia</span>
-          <span class="param-hint">Romansa · Keluarga · Heartwarming</span>
-        </button>
-        <button class="btn-sec param mood" data-key="mood" data-val="mindbending" type="button">
-          <span class="param-icon">🌀</span>
-          <span class="param-label">Mind-bending</span>
-          <span class="param-hint">Plot twist · Teori · Rewatch value</span>
-        </button>
-        <button class="btn-sec param mood" data-key="mood" data-val="adrenalin" type="button">
-          <span class="param-icon">⚡</span>
-          <span class="param-label">Adrenalin</span>
-          <span class="param-hint">Aksi · Seru · Memacu semangat</span>
-        </button>
-        <button class="btn-sec param mood" data-key="mood" data-val="sad" type="button">
-          <span class="param-icon">💔</span>
-          <span class="param-label">Sad & Menguras</span>
-          <span class="param-hint">Drama berat · Sad ending · Katarsis</span>
-        </button>
+      <div class="pill-group" id="moodGroup">
+        <button class="pill mood active" data-key="mood" data-val="general" type="button">🌐 General</button>
+        <button class="pill mood" data-key="mood" data-val="mencekam" type="button">😱 Mencekam</button>
+        <button class="pill mood" data-key="mood" data-val="nostalgia" type="button">🌅 Hangat & Nostalgia</button>
+        <button class="pill mood" data-key="mood" data-val="mindbending" type="button">🌀 Mind-bending</button>
+        <button class="pill mood" data-key="mood" data-val="adrenalin" type="button">⚡ Adrenalin</button>
+        <button class="pill mood" data-key="mood" data-val="sad" type="button">💔 Sad & Menguras</button>
       </div>
     </div>
-
-    <div class="form-group">
-      <label>Skala Budget Kampanye</label>
-      <div class="budget-grid" style="grid-template-columns: repeat(4, 1fr)">
-        <button class="btn-sec param budget active" data-key="budget" data-val="general" type="button">
-          <span class="param-icon">🌐</span>
-          <span class="param-label">General</span>
-          <span class="param-hint">AI mix semua pendekatan</span>
-        </button>
-        <button class="btn-sec param budget" data-key="budget" data-val="low" type="button">
-          <span class="param-icon">🌱</span>
-          <span class="param-label">Low Budget</span>
-          <span class="param-hint">100% Organik — TikTok, Reels, Thread, CapCut template</span>
-        </button>
-        <button class="btn-sec param budget" data-key="budget" data-val="medium" type="button">
-          <span class="param-icon">🚀</span>
-          <span class="param-label">Medium Budget</span>
-          <span class="param-hint">Organik + Micro/Macro KOL + Live session</span>
-        </button>
-        <button class="btn-sec param budget" data-key="budget" data-val="high" type="button">
-          <span class="param-icon">💎</span>
-          <span class="param-label">High Budget</span>
-          <span class="param-hint">Event Gala Premiere + CGI FOOH + Brand integration</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="form-group">
+    <div class="fg">
       <label>Hook Utama / USP Film</label>
-      <div class="param-grid">
-        <button class="btn-sec param usp active" data-key="usp" data-val="general" type="button">
-          <span class="param-icon">🌐</span>
-          <span class="param-label">General</span>
-          <span class="param-hint">AI temukan hook terbaik dari film</span>
+      <div class="pill-group" id="uspGroup">
+        <button class="pill usp active" data-key="usp" data-val="general" type="button">🌐 General</button>
+        <button class="pill usp" data-key="usp" data-val="plottwist" type="button">🔄 Plot Twist Gila</button>
+        <button class="pill usp" data-key="usp" data-val="visual" type="button">🎨 Visual & Estetik</button>
+        <button class="pill usp" data-key="usp" data-val="based" type="button">📖 Based on Story</button>
+        <button class="pill usp" data-key="usp" data-val="soundtrack" type="button">🎵 Soundtrack Ikonik</button>
+        <button class="pill usp" data-key="usp" data-val="cast" type="button">⭐ Star Power Cast</button>
+      </div>
+    </div>
+
+    <div class="form-section-title">📋 Logistik Kampanye</div>
+
+    <div class="fg">
+      <label>Skala Budget</label>
+      <div class="budget-pill-group" id="budgetGroup">
+        <button class="budget-pill budget active" data-key="budget" data-val="general" type="button">
+          <span class="bp-icon">🌐</span><span class="bp-name">General</span>
+          <span class="bp-hint">AI mix semua pendekatan</span>
         </button>
-        <button class="btn-sec param usp" data-key="usp" data-val="plottwist" type="button">
-          <span class="param-icon">🔄</span>
-          <span class="param-label">Plot Twist Gila</span>
-          <span class="param-hint">Ending tak terduga · Teori fandom</span>
+        <button class="budget-pill budget" data-key="budget" data-val="low" type="button">
+          <span class="bp-icon">🌱</span><span class="bp-name">Low Budget</span>
+          <span class="bp-hint">100% organik — TikTok, Reels, Thread</span>
         </button>
-        <button class="btn-sec param usp" data-key="usp" data-val="visual" type="button">
-          <span class="param-icon">🎨</span>
-          <span class="param-label">Visual & Estetik</span>
-          <span class="param-hint">Sinematografi indah · Color grading</span>
+        <button class="budget-pill budget" data-key="budget" data-val="medium" type="button">
+          <span class="bp-icon">🚀</span><span class="bp-name">Medium</span>
+          <span class="bp-hint">Organik + Micro/Macro KOL + Live</span>
         </button>
-        <button class="btn-sec param usp" data-key="usp" data-val="based" type="button">
-          <span class="param-icon">📖</span>
-          <span class="param-label">Based on True Story</span>
-          <span class="param-hint">Kisah nyata · Adaptasi buku terkenal</span>
-        </button>
-        <button class="btn-sec param usp" data-key="usp" data-val="soundtrack" type="button">
-          <span class="param-icon">🎵</span>
-          <span class="param-label">Soundtrack Ikonik</span>
-          <span class="param-hint">Musik viral · Audio trend TikTok</span>
-        </button>
-        <button class="btn-sec param usp" data-key="usp" data-val="cast" type="button">
-          <span class="param-icon">⭐</span>
-          <span class="param-label">Star Power Cast</span>
-          <span class="param-hint">Aktor populer · Fanbase besar</span>
+        <button class="budget-pill budget" data-key="budget" data-val="high" type="button">
+          <span class="bp-icon">💎</span><span class="bp-name">High Budget</span>
+          <span class="bp-hint">Event · CGI FOOH · Brand integration</span>
         </button>
       </div>
     </div>
 
-    <div class="form-group">
+    <div class="fg">
       <label>Durasi Kampanye</label>
       <div class="dur-grid">
-        <button class="btn-sec dur active" data-val="1" data-days="7">1 Minggu</button>
-        <button class="btn-sec dur" data-val="2" data-days="14">2 Minggu</button>
-        <button class="btn-sec dur" data-val="3" data-days="21">3 Minggu</button>
-        <button class="btn-sec dur" data-val="4" data-days="28">4 Minggu</button>
-        <button class="btn-sec dur" data-val="5" data-days="35">5 Minggu</button>
-        <button class="btn-sec dur" data-val="6" data-days="42">6 Minggu</button>
-        <button class="btn-sec dur" data-val="7" data-days="49">7 Minggu</button>
-        <button class="btn-sec dur" data-val="8" data-days="56">8 Minggu</button>
+        <button class="dur-btn active" data-val="1" data-days="7" type="button">1 Minggu</button>
+        <button class="dur-btn" data-val="2" data-days="14" type="button">2 Minggu</button>
+        <button class="dur-btn" data-val="3" data-days="21" type="button">3 Minggu</button>
+        <button class="dur-btn" data-val="4" data-days="28" type="button">4 Minggu</button>
+        <button class="dur-btn" data-val="5" data-days="35" type="button">5 Minggu</button>
+        <button class="dur-btn" data-val="6" data-days="42" type="button">6 Minggu</button>
+        <button class="dur-btn" data-val="7" data-days="49" type="button">7 Minggu</button>
+        <button class="dur-btn" data-val="8" data-days="56" type="button">8 Minggu</button>
       </div>
     </div>
 
-    <div class="form-group">
+    <div class="fg">
       <label>Timing Kampanye</label>
-      <div class="timing-grid" id="timingGrid">
-        <button class="btn-sec timing active" id="timingBefore" data-val="before" type="button">
-          <span class="timing-icon">⏮</span>
-          <span class="timing-label">Before Tayang</span>
-          <span class="timing-hint">Semua hari sebelum tanggal rilis</span>
+      <div class="timing-group">
+        <button class="timing-btn active" id="timingBefore" data-val="before" type="button">
+          <span class="t-icon">⏮</span><span class="t-label">Before Tayang</span>
+          <span class="t-hint">Semua hari sebelum rilis</span>
         </button>
-        <button class="btn-sec timing" id="timingBoth" data-val="both" type="button">
-          <span class="timing-icon">⏯</span>
-          <span class="timing-label">Before + After</span>
-          <span class="timing-hint">Dibagi rata sebelum & sesudah rilis</span>
+        <button class="timing-btn" id="timingBoth" data-val="both" type="button">
+          <span class="t-icon">⏯</span><span class="t-label">Before + After</span>
+          <span class="t-hint">Dibagi rata sebelum & sesudah</span>
         </button>
-        <button class="btn-sec timing" id="timingAfter" data-val="after" type="button">
-          <span class="timing-icon">⏭</span>
-          <span class="timing-label">After Tayang</span>
-          <span class="timing-hint">Semua hari setelah tanggal rilis</span>
+        <button class="timing-btn" id="timingAfter" data-val="after" type="button">
+          <span class="t-icon">⏭</span><span class="t-label">After Tayang</span>
+          <span class="t-hint">Semua hari setelah rilis</span>
         </button>
       </div>
-      <p id="timingHint" style="font-size:0.75rem;color:var(--gold);margin-top:6px;display:none"></p>
+      <p id="timingHint" class="helper-text" style="display:none"></p>
     </div>
 
-    <div class="form-group">
-      <label for="extraNotes">Catatan Tambahan <span class="opt">(opsional tapi powerful)</span></label>
-      <textarea id="extraNotes" placeholder="Tulis detail tambahan yang mempengaruhi strategi konten...
+    <div class="form-section-title">📝 Catatan Tambahan</div>
+
+    <div class="fg">
+      <label>Catatan Khusus <span class="opt">(opsional tapi powerful)</span></label>
+      <textarea id="extraNotes" style="min-height:110px;font-size:0.85rem;line-height:1.7" placeholder="Tulis detail tambahan yang mempengaruhi strategi konten...
 
 Contoh:
 • Film ini tayang di OTT KlikFilm (bukan Netflix/Vidio)
 • Sutradara: Angga Dwimas Sasongko, fanbase kritikus film
-• Ada kolaborasi brand dengan Indomie (product placement)
+• Kolaborasi brand dengan Indomie (product placement)
 • Tim konten hanya 2 orang, hindari ide yang butuh banyak produksi
-• Jangan sebut nama kompetitor film yang tayang bersamaan
-• Target kota utama: Jakarta, Surabaya, Medan" style="min-height:120px;font-size:0.85rem;line-height:1.7"></textarea>
-      <p style="font-size:0.75rem;color:var(--muted);margin-top:6px">💡 Semakin detail catatanmu, semakin spesifik dan akurat output AI yang dihasilkan.</p>
+• Jangan sebut nama kompetitor film yang tayang bersamaan"></textarea>
+      <p class="helper-text">💡 Semakin detail, semakin spesifik output AI yang dihasilkan.</p>
     </div>
 
     <p class="err" id="errMsg">Harap isi Judul, Sinopsis, Genre, dan Tanggal Tayang.</p>
-    <button class="btn" id="genBtn">✦ Generate Campaign Plan</button>
+    <button class="gen-btn" id="genBtn" type="button">✦ Generate Campaign Plan</button>
   </div>
 
+  <!-- LOADING -->
   <div id="loadingSection">
     <div class="loader"></div>
     <div class="load-title">Menyusun strategi kampanye...</div>
     <div id="stepLabel" class="load-sub">Memulai...</div>
-    <div class="progress-wrap">
-      <div class="progress-bar" id="progressBar" style="width:5%"></div>
-    </div>
-    <div class="load-hint">Setiap langkah butuh ~8-12 detik · Jangan tutup halaman</div>
+    <div class="progress-wrap"><div class="progress-bar" id="progressBar" style="width:5%"></div></div>
+    <p class="load-hint">Setiap langkah ~8-12 detik · Jangan tutup halaman</p>
   </div>
 
+  <!-- RESULTS -->
   <div id="resultsSection"></div>
+</section>
 </div>
 
 <!-- HISTORY MODAL -->
-<div id="historyModal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);overflow-y:auto;padding:2rem 1rem">
-  <div style="max-width:820px;margin:0 auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+<div id="historyModal">
+  <div class="history-inner">
+    <div class="history-header">
       <div>
-        <h2 style="font-family:'Sora',sans-serif;font-size:1.5rem;color:#fff">📚 Campaign History</h2>
-        <p style="font-size:0.85rem;color:#888899;margin-top:3px">Tersimpan lokal di browser kamu — maks 6 kampanye</p>
+        <div class="history-title">📚 Campaign History</div>
+        <p style="font-size:0.78rem;color:var(--muted);margin-top:2px">Tersimpan lokal di browser · Maks 6 kampanye</p>
       </div>
-      <button id="closeHistory" style="background:none;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 16px;color:#888899;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.85rem">✕ Tutup</button>
+      <button class="hist-close" id="closeHistory">✕ Tutup</button>
     </div>
     <div id="historyList"></div>
   </div>
 </div>
 
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">✦ CampaignPlanner</div>
+  <p class="footer-copy">Dibuat untuk industri film Indonesia &nbsp;·&nbsp; <a href="#app" style="color:var(--primary)">Buat kampanye baru</a></p>
+</footer>
+
+
 <script>
+
 const WORKER_URL = 'https://campaign-plannergr.emilkwikku001.workers.dev';
 
 let dur = 1; // weeks
@@ -477,8 +803,6 @@ function setReleaseType(btn) {
     b.style.color = '';
   });
   btn.classList.add('active');
-  btn.style.borderColor = 'var(--gold)';
-  btn.style.color = 'var(--gold)';
   releaseType = btn.dataset.val;
 
   // Auto-limit duration for OTT
@@ -500,7 +824,7 @@ function setParam(btn) {
   const key = btn.dataset.key;
   const val = btn.dataset.val;
   // Deactivate siblings
-  document.querySelectorAll('.param.' + key).forEach(b => {
+  document.querySelectorAll('[data-key="' + key + '"]').forEach(b => {
     b.classList.remove('active');
   });
   btn.classList.add('active');
@@ -538,12 +862,12 @@ function updateTimingUI() {
   }
 
   // Update active state
-  document.querySelectorAll('.timing').forEach(b => {
+  document.querySelectorAll('.timing-btn').forEach(b => {
     b.classList.remove('active');
     b.style.borderColor = '';
     b.style.color = '';
   });
-  const activeBtn = document.querySelector('.timing[data-val="' + timing + '"]');
+  const activeBtn = document.querySelector('.timing-btn[data-val="' + timing + '"]');
   if (activeBtn && !activeBtn.classList.contains('disabled')) {
     activeBtn.classList.add('active');
     activeBtn.style.borderColor = 'var(--gold)';
@@ -1036,10 +1360,10 @@ function renderResults() {
     + '<div><div class="out-title">' + meta.title + '</div>'
     + '<div class="out-meta">' + (releaseType === 'ott' ? '📺 OTT · ' : '🎬 Bioskop · ') + meta.genre + ' · Tayang ' + meta.releaseFormatted + (meta.cast?' · '+meta.cast:'') + '</div>'
     + '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">'
-    + '<span style="font-size:0.7rem;padding:2px 8px;border-radius:20px;background:rgba(209,161,83,.12);color:var(--gold)">' + params.audience.toUpperCase() + '</span>'
-    + '<span style="font-size:0.7rem;padding:2px 8px;border-radius:20px;background:rgba(209,161,83,.12);color:var(--gold)">' + params.tone.toUpperCase() + '</span>'
-    + '<span style="font-size:0.7rem;padding:2px 8px;border-radius:20px;background:rgba(209,161,83,.12);color:var(--gold)">' + params.mood.toUpperCase() + '</span>'
-    + '<span style="font-size:0.7rem;padding:2px 8px;border-radius:20px;background:rgba(209,161,83,.12);color:var(--gold)">' + params.budget.toUpperCase() + ' BUDGET</span>'
+    + '<span style="font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--primary-soft);border:1px solid var(--primary-mid);color:var(--primary)">' + params.audience.toUpperCase() + '</span>'
+    + '<span style="font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--primary-soft);border:1px solid var(--primary-mid);color:var(--primary)">' + params.tone.toUpperCase() + '</span>'
+    + '<span style="font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--primary-soft);border:1px solid var(--primary-mid);color:var(--primary)">' + params.mood.toUpperCase() + '</span>'
+    + '<span style="font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--primary-soft);border:1px solid var(--primary-mid);color:var(--primary)">' + params.budget.toUpperCase() + ' BUDGET</span>'
     + (meta.notes ? '<div style="margin-top:10px;padding:10px 12px;background:rgba(209,161,83,0.06);border:1px solid rgba(209,161,83,0.2);border-radius:8px;font-size:0.78rem;color:#d1a153">'
     + '<span style="font-weight:600">📝 Catatan: </span><span style="color:#f0f0f4">' + meta.notes.replace(/</g,'&lt;') + '</span></div>' : '')
     + '</div>'
@@ -1059,12 +1383,12 @@ function renderResults() {
     + caps
     + '<div class="sec-title">💡 Tips Box Office</div>'
     + '<div class="tips-grid">' + tips + '</div>'
-    + '<div class="btn-group">'
-    + '<button class="btn-sec" id="btnReset">← Buat Baru</button>'
-    + '<button class="btn-sec" id="btnHistory">📚 History</button>'
-    + '<button class="btn-sec" id="btnSave">💾 Save</button>'
-    + '<button class="btn-sec" id="btnPrint">🖨 Print</button>'
-    + '<button class="btn" id="btnPDF">⬇ Export PDF</button>'
+    + '<div class="result-actions" style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border)">'
+    + '<button class="act-btn" id="btnReset">← Buat Baru</button>'
+    + '<button class="act-btn" id="btnHistory">📚 History</button>'
+    + '<button class="act-btn save" id="btnSave">💾 Simpan</button>'
+    + '<button class="act-btn" id="btnPrint">🖨 Print</button>'
+    + '<button class="act-btn primary" id="btnPDF">⬇ Export PDF</button>'
     + '</div>'
     + '</div>';
   // Attach result button listeners
@@ -1215,6 +1539,9 @@ function saveToHistory() {
       btn.style.color = '';
     }, 2000);
   }
+  // Update nav badge
+  const updateNavHist2 = () => { const h=getHistory(); const btn=document.getElementById('navHistBtn'); const cnt=document.getElementById('navHistCount'); if(btn&&cnt){if(h.length>0){btn.style.display='flex';cnt.textContent=h.length;}else{btn.style.display='none';}} };
+  updateNavHist2();
 }
 
 function getHistory() {
@@ -1227,12 +1554,10 @@ function showHistory() {
   const modal   = document.getElementById('historyModal');
   const list    = document.getElementById('historyList');
 
-  if (!history.length) {
-    list.innerHTML = '<div style="text-align:center;padding:3rem;color:#888899"><div style="font-size:3rem;margin-bottom:1rem">📭</div><div style="font-size:1rem;font-weight:600;color:#f0f0f4">Belum ada campaign tersimpan</div><div style="font-size:0.85rem;margin-top:6px">Klik "💾 Save" setelah generate untuk menyimpan</div></div>';
-  } else {
+  {
     const phColors = {'1':'rgba(209,161,83,.18)','2':'rgba(78,239,178,.12)','3':'rgba(255,120,80,.12)','4':'rgba(120,160,255,.12)','5':'rgba(220,120,255,.12)'};
     const phText   = {'1':'#d1a153','2':'#4eefb2','3':'#ff7850','4':'#78a0ff','5':'#dc78ff'};
-    list.innerHTML = history.map(h => {
+    list.innerHTML = history.length ? history.map(h => {
       const timingLabel = h.timing === 'before' ? '⏮ Before' : h.timing === 'after' ? '⏭ After' : '⏯ Before+After';
       const rtLabel     = h.releaseType === 'ott' ? '📺 OTT' : '🎬 Bioskop';
       const phases = (h.plan.phases||[]).map(p =>
@@ -1240,36 +1565,34 @@ function showHistory() {
       ).join('');
       const captionCount = (h.plan.captions||[]).length;
       const dayCount     = (h.plan.days||[]).length;
-      return '<div style="background:#13141a;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;margin-bottom:12px">'
-        + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">'
+      return '<div class="hist-card">'
+        + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">'
         + '<div>'
-        + '<div style="font-family:\'Sora\',sans-serif;font-size:1.1rem;font-weight:700;color:#f0f0f4;margin-bottom:4px">'+h.title+'</div>'
-        + '<div style="font-size:0.8rem;color:#888899">'+h.genre+' · Tayang '+h.releaseFormatted+(h.cast?' · '+h.cast:'')+'</div>'
+        + '<div class="hist-title">'+h.title+'</div>'
+        + '<div class="hist-meta">'+h.genre+' · Tayang '+h.releaseFormatted+(h.cast?' · '+h.cast:'')+'</div>'
         + '</div>'
         + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-        + '<span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,0.06);color:#888899">'+rtLabel+'</span>'
-        + '<span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,0.06);color:#888899">'+timingLabel+'</span>'
-        + '<span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,0.06);color:#888899">'+h.dur+' Minggu</span>'
+        + '<span class="hist-badge">'+rtLabel+'</span>'
+        + '<span class="hist-badge">'+timingLabel+'</span>'
+        + '<span class="hist-badge">'+h.dur+' Minggu</span>'
         + '</div>'
         + '</div>'
         + '<div style="margin-bottom:12px">'+phases+'</div>'
         + (h.notes ? '<div style="margin-bottom:10px;padding:8px 10px;background:rgba(209,161,83,0.06);border-left:2px solid rgba(209,161,83,0.4);border-radius:0 6px 6px 0;font-size:0.75rem">'
 + '<span style="color:#d1a153;font-weight:600">📝 </span><span style="color:#f0f0f4">' + h.notes.substring(0,120) + (h.notes.length > 120 ? '...' : '') + '</span></div>' : '')
-+ '<div style="display:flex;gap:16px;margin-bottom:16px">'
-        + '<div style="text-align:center"><div style="font-size:1.2rem;font-weight:700;color:#d1a153">'+dayCount*2+'</div><div style="font-size:0.7rem;color:#888899">Total Konten</div></div>'
-        + '<div style="text-align:center"><div style="font-size:1.2rem;font-weight:700;color:#d1a153">'+dayCount+'</div><div style="font-size:0.7rem;color:#888899">Hari</div></div>'
-        + '<div style="text-align:center"><div style="font-size:1.2rem;font-weight:700;color:#d1a153">'+captionCount+'</div><div style="font-size:0.7rem;color:#888899">Caption</div></div>'
-        + '<div style="margin-left:auto;text-align:right"><div style="font-size:0.7rem;color:#888899">Disimpan</div><div style="font-size:0.78rem;color:#f0f0f4">'+h.savedAt+'</div></div>'
++ '<div class="hist-stats">'
+        + '<div class="hist-stat"><div class="n">'+(dayCount*2)+'</div><div class="l">Konten</div></div>'
+        + '<div class="hist-stat"><div class="n">'+dayCount+'</div><div class="l">Hari</div></div>'
+        + '<div class="hist-stat"><div class="n">'+captionCount+'</div><div class="l">Caption</div></div>'
+        + '<div style="margin-left:auto;text-align:right" class="hist-stat"><div class="n" style="font-size:0.82rem">'+h.savedAt+'</div><div class="l">Disimpan</div></div>'
         + '</div>'
-        + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
-        + '<button onclick="loadHistory('+h.id+')" style="background:#d1a153;color:#000;border:none;border-radius:8px;padding:8px 16px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif">▶ Buka Kembali</button>'
-        + '<button onclick="exportHistoryPDF('+h.id+')" style="background:none;border:1px solid rgba(255,255,255,0.14);border-radius:8px;padding:8px 16px;font-size:0.82rem;color:#f0f0f4;cursor:pointer;font-family:\'Inter\',sans-serif">⬇ Export PDF</button>'
-        + '<button onclick="deleteHistory('+h.id+')" style="background:none;border:1px solid rgba(255,80,80,0.25);border-radius:8px;padding:8px 14px;font-size:0.82rem;color:#ff5060;cursor:pointer;font-family:\'Inter\',sans-serif;margin-left:auto">🗑</button>'
+        + '<div class="hist-actions">'
+        + '<button onclick="loadHistory('+h.id+')" class="hist-btn primary">▶ Buka Kembali</button>'
+        + '<button onclick="exportHistoryPDF('+h.id+')" class="hist-btn">⬇ Export PDF</button>'
+        + '<button onclick="deleteHistory('+h.id+')" class="hist-btn danger">🗑</button>'
         + '</div>'
         + '</div>';
-    }).join('');
-  }
-
+    }).join('') : '<div class="hist-empty"><div class="e-icon">📭</div><div class="e-title">Belum ada kampanye tersimpan</div><p>Klik 💾 Simpan setelah generate</p></div>';
   modal.style.display = 'block';
   document.body.style.overflow = 'hidden';
 }
@@ -1611,6 +1934,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const modal = document.getElementById('historyModal');
   if (modal) modal.addEventListener('click', function(e) { if (e.target === this) hideHistory(); });
 
+  // Theme toggle
+  const themeToggle = document.getElementById('themeToggle');
+  const savedTheme = localStorage.getItem('cp_theme') || 'dark';
+  document.documentElement.className = savedTheme;
+  themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+  themeToggle.addEventListener('click', () => {
+    const isDark = document.documentElement.classList.contains('dark');
+    const newTheme = isDark ? 'light' : 'dark';
+    document.documentElement.className = newTheme;
+    themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+    localStorage.setItem('cp_theme', newTheme);
+  });
+
+  // Nav history button
+  const updateNavHist = () => {
+    const h = getHistory();
+    const btn = document.getElementById('navHistBtn');
+    const cnt = document.getElementById('navHistCount');
+    if (btn && cnt) {
+      if (h.length > 0) { btn.style.display = 'flex'; cnt.textContent = h.length; }
+      else { btn.style.display = 'none'; }
+    }
+  };
+  updateNavHist();
+
   // Show history button in header if history exists
   const hist = getHistory();
   if (hist.length) {
@@ -1624,24 +1972,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  document.querySelectorAll('.param').forEach(btn => {
+  document.querySelectorAll('.pill, .budget-pill').forEach(btn => {
     btn.addEventListener('click', function() { setParam(this); });
   });
 
-  document.querySelectorAll('.rtype').forEach(btn => {
+  document.querySelectorAll('.rtype-btn').forEach(btn => {
     btn.addEventListener('click', function() { setReleaseType(this); });
   });
   // Set initial rtype active style
-  const firstRtype = document.querySelector('.rtype.active');
-  if (firstRtype) { firstRtype.style.borderColor='var(--gold)'; firstRtype.style.color='var(--gold)'; }
+  // rtype active styles by CSS
 
   document.querySelectorAll('.dur').forEach(btn => {
     btn.addEventListener('click', function() { setDur(this); });
   });
   // Set initial active style
-  const firstDur = document.querySelector('.dur.active');
-  if (firstDur) { firstDur.style.borderColor='var(--gold)'; firstDur.style.color='var(--gold)'; }
+  // active styles handled by CSS
 });
-</script>
+
+
+}</script>
 </body>
 </html>
