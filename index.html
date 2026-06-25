@@ -376,57 +376,47 @@
       else clearInterval(iv);
     }, 1500);
 
-    const prompt = `Kamu adalah social media strategist dan content manager profesional khusus industri film Indonesia. Buat rencana kampanye konten lengkap untuk film berikut:
+    const filmData = `JUDUL: ${title}\nGENRE: ${genre}\nTANGGAL TAYANG: ${relFmt}\nSINOPSIS: ${synopsis}\nPEMAIN: ${cast.length ? cast.join(', ') : 'Belum ditentukan'}\nDURASI KAMPANYE: ${dur} sebelum tayang`;
 
-JUDUL: ${title}
-GENRE: ${genre}
-TANGGAL TAYANG: ${relFmt}
-SINOPSIS: ${synopsis}
-PEMAIN: ${cast.length ? cast.join(', ') : 'Belum ditentukan'}
-DURASI KAMPANYE: ${dur} sebelum tayang
+    // Prompt 1: Struktur kampanye (lebih pendek, tidak akan kepotong)
+    const prompt1 = `Kamu adalah social media strategist untuk industri film Indonesia.
 
-Berikan output dalam format JSON yang valid (HANYA JSON, tidak ada teks lain, tidak ada markdown fence) dengan struktur:
-{
-  "overview": { "totalPosts": number, "platforms": ["Instagram","TikTok","X/Twitter","YouTube"], "phases": number, "targetAudience": "string singkat" },
-  "phases": [{ "name": "string", "period": "string", "goal": "string", "type": "1" }],
-  "calendar": [{ "week": "string", "phase": "string", "phaseType": "1", "theme": "string", "monday": "string atau kosong", "wednesday": "string atau kosong", "friday": "string atau kosong", "saturday": "string atau kosong", "platforms": ["array"] }],
-  "captions": [{ "title": "string", "platform": "Instagram", "phase": "string", "caption": "caption lengkap dengan hashtag" }],
-  "tipsBoxOffice": [{ "icon": "🎯", "title": "string", "desc": "string" }]
-}
-Buat 5 fase kampanye, 6-8 entri kalender, 6 caption siap posting (bervariasi platformnya), 4 tips Box Office. Caption dalam Bahasa Indonesia yang engaging, spesifik untuk film ini. phaseType harus "1" sampai "5".`;
+${filmData}
 
-    try {
+Balas HANYA JSON valid tanpa teks lain. Struktur:
+{"overview":{"totalPosts":number,"platforms":["Instagram","TikTok","X/Twitter","YouTube"],"phases":number,"targetAudience":"maks 6 kata"},"phases":[{"name":"maks 3 kata","period":"string","goal":"maks 10 kata","type":"1"}],"calendar":[{"week":"Minggu 1","phase":"string","phaseType":"1","theme":"maks 8 kata","monday":"maks 8 kata","wednesday":"maks 8 kata","friday":"maks 8 kata","saturday":"","platforms":["Instagram"]}]}
+Buat 5 fase (type "1"-"5") dan 7 entri kalender. String harus SINGKAT.`;
+
+    // Prompt 2: Caption & tips saja
+    const prompt2 = `Kamu adalah social media copywriter untuk industri film Indonesia.
+
+${filmData}
+
+Balas HANYA JSON valid tanpa teks lain. Struktur:
+{"captions":[{"title":"string","platform":"Instagram","phase":"string","caption":"caption bahasa Indonesia dengan hashtag"}],"tipsBoxOffice":[{"icon":"🎯","title":"string","desc":"maks 20 kata"}]}
+Buat 6 caption (2 Instagram, 2 TikTok, 1 X/Twitter, 1 YouTube) dan 4 tips Box Office. Caption boleh panjang dan kreatif.`;
+
+    const callAPI = async (prompt) => {
       const res = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 8000,
+          max_tokens: 3000,
           messages: [{ role: 'user', content: prompt }]
         })
       });
+      const data = await res.json();
+      if (data.error) throw new Error(JSON.stringify(data.error));
+      const raw = data.content.map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
+      return JSON.parse(raw);
+    };
+
+    try {
+      const [part1, part2] = await Promise.all([callAPI(prompt1), callAPI(prompt2)]);
       clearInterval(iv);
       for (let i = 0; i < 5; i++) document.getElementById('s'+i).className = 'step-dot done';
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      let raw = data.content.map(b => b.text || '').join('');
-      raw = raw.replace(/```json|```/g, '').trim();
-      // Repair truncated JSON — find last complete top-level key and close the object
-      try {
-        plan = JSON.parse(raw);
-      } catch(parseErr) {
-        // Try to salvage by closing unclosed JSON structures
-        let fixed = raw;
-        // Close any open arrays/objects greedily
-        const opens = (fixed.match(/\[/g)||[]).length - (fixed.match(/\]/g)||[]).length;
-        const openObj = (fixed.match(/\{/g)||[]).length - (fixed.match(/\}/g)||[]).length;
-        // Remove trailing incomplete item (last comma + partial object)
-        fixed = fixed.replace(/,\s*\{[^}]*$/, '');
-        fixed = fixed.replace(/,\s*"[^"]*$/, '');
-        for (let i = 0; i < opens; i++) fixed += ']';
-        for (let i = 0; i < openObj; i++) fixed += '}';
-        plan = JSON.parse(fixed);
-      }
+      plan = { ...part1, ...part2 };
       document.getElementById('loadingSection').style.display = 'none';
       renderResults(plan);
     } catch(e) {
@@ -437,7 +427,6 @@ Buat 5 fase kampanye, 6-8 entri kalender, 6 caption siap posting (bervariasi pla
       document.getElementById('errMsg').style.display = 'block';
     }
   }
-
   function renderResults(p) {
     const el = document.getElementById('resultsSection');
     el.style.display = 'block';
