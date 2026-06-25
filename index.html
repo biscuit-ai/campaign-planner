@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Campaign Planner — Box Office Film Strategy</title>
+<meta name="description" content="Generator strategi konten film Indonesia. Masukkan judul, sinopsis, dan tanggal tayang — dapatkan kampanye lengkap siap Box Office." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0b0c10;
+    --surface: #13141a;
+    --surface2: #1a1b23;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0f0f4;
+    --muted: #888899;
+    --accent: #7c6ff7;
+    --accent2: #5b52d4;
+    --accent-soft: rgba(124,111,247,0.15);
+    --accent-glow: rgba(124,111,247,0.25);
+    --green: #34c98a;
+    --green-soft: rgba(52,201,138,0.12);
+    --amber: #f0a040;
+    --amber-soft: rgba(240,160,64,0.12);
+    --red: #f05060;
+    --red-soft: rgba(240,80,96,0.12);
+    --blue: #4aa8f0;
+    --blue-soft: rgba(74,168,240,0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2rem; height: 60px;
+    background: rgba(11,12,16,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .nav-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; }
+  .nav-logo .dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; }
+  .nav-logo span { font-family: 'Sora', sans-serif; font-size: 15px; color: var(--text); font-weight: 600; }
+  .nav-pill {
+    font-size: 12px; color: var(--muted);
+    border: 0.5px solid var(--border2);
+    padding: 4px 12px; border-radius: 20px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 80px 1.5rem 4rem;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; top: -120px; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(124,111,247,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-soft); border: 0.5px solid rgba(124,111,247,0.3);
+    padding: 5px 14px; border-radius: 20px;
+    font-size: 12px; color: var(--accent); font-weight: 500;
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 {
+    font-family: 'Sora', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700; line-height: 1.15;
+    margin-bottom: 1rem;
+    max-width: 700px;
+  }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p {
+    font-size: 16px; color: var(--muted);
+    max-width: 480px; margin: 0 auto 2.5rem;
+    line-height: 1.7;
+  }
+  .hero-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent); color: #fff;
+    padding: 13px 28px; border-radius: var(--radius-sm);
+    font-size: 15px; font-weight: 600; text-decoration: none;
+    border: none; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .hero-cta:hover { background: var(--accent2); transform: translateY(-1px); }
+  .hero-stats {
+    display: flex; gap: 2rem; margin-top: 3.5rem;
+    justify-content: center; flex-wrap: wrap;
+  }
+  .hero-stat { text-align: center; }
+  .hero-stat .n { font-family: 'Sora',sans-serif; font-size: 28px; font-weight: 700; color: var(--text); }
+  .hero-stat .l { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* ── SECTION ── */
+  section { padding: 5rem 1.5rem; max-width: 860px; margin: 0 auto; }
+  .section-eyebrow {
+    font-size: 11px; font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem;
+  }
+  .section-title {
+    font-family: 'Sora', sans-serif; font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 700; margin-bottom: 1rem;
+  }
+  .section-sub { color: var(--muted); font-size: 15px; max-width: 520px; line-height: 1.7; }
+
+  /* ── FEATURES ── */
+  .features-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem; margin-top: 2.5rem;
+  }
+  .feat-card {
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem;
+    transition: border-color 0.2s;
+  }
+  .feat-card:hover { border-color: var(--border2); }
+  .feat-icon {
+    width: 36px; height: 36px; background: var(--accent-soft);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 18px; margin-bottom: 0.75rem;
+  }
+  .feat-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .feat-card p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  /* ── FORM ── */
+  #app { scroll-margin-top: 80px; }
+  .form-wrap {
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: 16px; padding: 2rem;
+    margin-top: 2rem;
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .fg { display: flex; flex-direction: column; gap: 6px; }
+  .fg.full { grid-column: 1 / -1; }
+  .fg label { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .fg label span.req { color: var(--red); }
+  .fg input, .fg select, .fg textarea {
+    background: var(--surface2); border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm); padding: 10px 14px;
+    color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px;
+    width: 100%; transition: border-color 0.15s;
+    -webkit-appearance: none; appearance: none;
+  }
+  .fg select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888899' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+    padding-right: 32px;
+  }
+  .fg input:focus, .fg select:focus, .fg textarea:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .fg textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+  .cast-row { display: flex; gap: 8px; margin-bottom: 6px; }
+  .cast-row input { flex: 1; }
+  .cast-row .rm {
+    background: none; border: 0.5px solid var(--border2); border-radius: var(--radius-sm);
+    padding: 0 12px; color: var(--muted); cursor: pointer; font-size: 18px; flex-shrink: 0;
+    transition: background 0.1s, color 0.1s;
+  }
+  .cast-row .rm:hover { background: var(--red-soft); color: var(--red); border-color: var(--red); }
+  .add-cast-btn {
+    background: none; border: 0.5px dashed var(--border2);
+    border-radius: var(--radius-sm); padding: 9px; color: var(--muted);
+    cursor: pointer; font-size: 13px; width: 100%; margin-top: 4px;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .add-cast-btn:hover { border-color: var(--accent); color: var(--accent); border-style: solid; }
+  .dur-group { display: flex; gap: 8px; }
+  .dur-btn {
+    flex: 1; background: var(--surface2); border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm); padding: 9px; font-size: 13px;
+    color: var(--muted); cursor: pointer; font-family: 'Inter',sans-serif;
+    transition: all 0.15s;
+  }
+  .dur-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .gen-btn {
+    width: 100%; padding: 14px; background: var(--accent); color: #fff;
+    border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600;
+    cursor: pointer; margin-top: 1.25rem; display: flex; align-items: center;
+    justify-content: center; gap: 8px; font-family: 'Inter', sans-serif;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .gen-btn:hover { background: var(--accent2); }
+  .gen-btn:disabled { background: var(--surface2); color: var(--muted); cursor: not-allowed; transform: none; }
+  .err { color: var(--red); font-size: 13px; margin-top: 8px; display: none; }
+
+  /* ── LOADING ── */
+  #loadingSection {
+    display: none; text-align: center; padding: 4rem 1rem;
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: 16px; margin-top: 2rem;
+  }
+  .loader {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 2px solid var(--border2); border-top-color: var(--accent);
+    animation: spin .7s linear infinite; margin: 0 auto 1.25rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .load-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .load-sub { font-size: 13px; color: var(--muted); }
+  .load-steps { display: flex; flex-direction: column; gap: 6px; margin-top: 1.5rem; max-width: 280px; margin-left: auto; margin-right: auto; }
+  .load-step { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); text-align: left; }
+  .step-dot { width: 6px; height: 6px; background: var(--border2); border-radius: 50%; flex-shrink: 0; transition: background 0.3s; }
+  .step-dot.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .step-dot.done { background: var(--green); }
+
+  /* ── RESULTS ── */
+  #resultsSection { display: none; margin-top: 2rem; }
+  .result-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem; border-bottom: 0.5px solid var(--border);
+  }
+  .result-title { font-family: 'Sora',sans-serif; font-size: 20px; font-weight: 700; }
+  .result-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .ready-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--green-soft); border: 0.5px solid rgba(52,201,138,0.3);
+    color: var(--green); padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .export-bar { display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .exp-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13px;
+    font-weight: 600; cursor: pointer; border: 0.5px solid var(--border2);
+    font-family: 'Inter', sans-serif; transition: all 0.15s;
+  }
+  .exp-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .exp-btn.primary:hover { background: var(--accent2); }
+  .exp-btn.secondary { background: var(--surface2); color: var(--text); }
+  .exp-btn.secondary:hover { background: var(--surface); border-color: var(--border2); }
+  .exp-btn.ghost { background: none; color: var(--muted); }
+  .exp-btn.ghost:hover { color: var(--text); background: var(--surface2); }
+
+  .rlabel {
+    font-size: 10px; font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 0.75rem; margin-top: 1.75rem;
+  }
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  .s-card {
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm); padding: 1rem; text-align: center;
+  }
+  .s-card .sn { font-family: 'Sora',sans-serif; font-size: 24px; font-weight: 700; color: var(--text); }
+  .s-card .sl { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  .phases-list { display: flex; flex-direction: column; gap: 8px; margin-top: 0.75rem; }
+  .phase-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); }
+  .pbadge { padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; margin-top: 2px; }
+  .ph1 { background: rgba(124,111,247,0.15); color: #a89cf7; }
+  .ph2 { background: rgba(52,201,138,0.12); color: #34c98a; }
+  .ph3 { background: rgba(240,160,64,0.12); color: #f0a040; }
+  .ph4 { background: rgba(240,80,96,0.12); color: #f05060; }
+  .ph5 { background: rgba(74,168,240,0.12); color: #4aa8f0; }
+  .phase-item .pinfo .pp { font-size: 11px; color: var(--muted); }
+  .phase-item .pinfo .pg { font-size: 13px; color: var(--text); margin-top: 2px; }
+
+  .cal-wrap { overflow-x: auto; border: 0.5px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 580px; }
+  thead th {
+    background: var(--surface2); padding: 10px 12px; text-align: left;
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    letter-spacing: .04em; text-transform: uppercase;
+    border-bottom: 0.5px solid var(--border);
+  }
+  tbody td { padding: 10px 12px; border-bottom: 0.5px solid var(--border); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  .ptag { display: inline-block; padding: 2px 7px; background: var(--surface2); border-radius: 5px; font-size: 11px; color: var(--muted); margin: 1px; }
+
+  .captions-list { display: flex; flex-direction: column; gap: 10px; margin-top: 0.75rem; }
+  .cap-card {
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 1.1rem;
+  }
+  .cap-card:hover { border-color: var(--border2); }
+  .cap-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cap-meta { display: flex; align-items: center; gap: 8px; }
+  .cap-plat { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 20px; }
+  .cap-name { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .copy-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--surface2); border: 0.5px solid var(--border2);
+    border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 500;
+    color: var(--muted); cursor: pointer; font-family: 'Inter',sans-serif;
+    transition: all 0.15s;
+  }
+  .copy-btn:hover { color: var(--text); border-color: var(--accent); }
+  .copy-btn.copied { color: var(--green); border-color: var(--green); }
+  .cap-text { font-size: 13px; line-height: 1.7; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+
+  .tips-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin-top: 0.75rem; }
+  .tip-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.1rem; }
+  .tip-icon { font-size: 20px; margin-bottom: 8px; }
+  .tip-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .tip-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  .reset-row { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 0.5px solid var(--border); display: flex; justify-content: center; }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 0.5px solid var(--border);
+    padding: 2rem 1.5rem; text-align: center;
+    color: var(--muted); font-size: 12px;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .fg.full { grid-column: 1; }
+    nav { padding: 0 1rem; }
+    section { padding: 3rem 1rem; }
+    .form-wrap { padding: 1.25rem; }
+    .hero h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#">
+    <div class="dot"></div>
+    <span>Campaign Planner</span>
+  </a>
+  <span class="nav-pill">🎬 Film Box Office</span>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">✦ AI-Powered Content Strategy</div>
+  <h1>Bikin kampanye film yang <em>beneran</em> Box Office</h1>
+  <p>Masukkan judul, sinopsis, dan tanggal tayang — AI kami susun kalender konten, caption, dan strategi lengkap untuk semua platform.</p>
+  <a href="#app" class="hero-cta">Mulai Sekarang →</a>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="n">4</div><div class="l">Platform Sekaligus</div></div>
+    <div class="hero-stat"><div class="n">5</div><div class="l">Fase Kampanye</div></div>
+    <div class="hero-stat"><div class="n">PDF</div><div class="l">Siap Export</div></div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section>
+  <div class="section-eyebrow">Fitur Unggulan</div>
+  <div class="section-title">Semua yang kamu butuhkan<br/>dalam satu klik</div>
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon">📅</div>
+      <h3>Konten Kalender</h3>
+      <p>Jadwal posting harian hingga 2 bulan, lengkap dengan tema dan platform per minggu.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">✍️</div>
+      <h3>Caption Siap Pakai</h3>
+      <p>Caption per platform (IG, TikTok, X, YouTube) dengan hashtag — tinggal copy-paste.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🎯</div>
+      <h3>Fase Kampanye</h3>
+      <p>Strategi bertahap dari Awareness sampai Launch Day, dengan goal yang terukur.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📄</div>
+      <h3>Export PDF</h3>
+      <p>Dokumen profesional siap presentasi ke produser, sponsor, atau tim marketing.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FORM -->
+<section id="app">
+  <div class="section-eyebrow">Generator</div>
+  <div class="section-title">Masukkan data film kamu</div>
+  <div class="section-sub">Isi form di bawah — hasilnya keluar dalam hitungan detik.</div>
+
+  <div class="form-wrap" id="formSection">
+    <div class="form-grid">
+      <div class="fg full">
+        <label>Judul Film <span class="req">*</span></label>
+        <input type="text" id="movieTitle" placeholder="Contoh: Garis Waktu" autocomplete="off" />
+      </div>
+      <div class="fg">
+        <label>Tanggal Tayang <span class="req">*</span></label>
+        <input type="date" id="releaseDate" />
+      </div>
+      <div class="fg">
+        <label>Genre <span class="req">*</span></label>
+        <select id="genre">
+          <option value="">Pilih genre...</option>
+          <option>Drama Romansa</option>
+          <option>Horor / Thriller</option>
+          <option>Aksi / Laga</option>
+          <option>Komedi</option>
+          <option>Petualangan</option>
+          <option>Animasi</option>
+          <option>Dokumenter</option>
+          <option>Biografi</option>
+        </select>
+      </div>
+      <div class="fg full">
+        <label>Sinopsis <span class="req">*</span></label>
+        <textarea id="synopsis" placeholder="Ceritakan singkat tentang film ini — siapa karakternya, apa konfliknya, apa yang bikin penonton penasaran..."></textarea>
+      </div>
+      <div class="fg full">
+        <label>Pemain Utama <span style="color:var(--muted);font-weight:400">(opsional)</span></label>
+        <div id="castList">
+          <div class="cast-row">
+            <input type="text" placeholder="Nama pemain, misal: Abun Sungkar" />
+            <button class="rm" onclick="removeCast(this)" type="button">×</button>
+          </div>
+        </div>
+        <button class="add-cast-btn" onclick="addCast()" type="button">+ Tambah pemain</button>
+      </div>
+      <div class="fg full">
+        <label>Durasi Kampanye</label>
+        <div class="dur-group">
+          <button class="dur-btn active" onclick="setDur(this,'1 bulan')" type="button">1 Bulan</button>
+          <button class="dur-btn" onclick="setDur(this,'2 bulan')" type="button">2 Bulan</button>
+        </div>
+      </div>
+    </div>
+    <div class="err" id="errMsg">Harap lengkapi judul, tanggal tayang, genre, dan sinopsis.</div>
+    <button class="gen-btn" id="genBtn" onclick="generate()" type="button">✦ Generate Campaign Plan</button>
+  </div>
+
+  <!-- LOADING -->
+  <div id="loadingSection">
+    <div class="loader"></div>
+    <div class="load-title">Menyusun strategi kampanye...</div>
+    <div class="load-sub">AI sedang bekerja untuk film kamu</div>
+    <div class="load-steps">
+      <div class="load-step"><div class="step-dot" id="s0"></div><span>Menganalisis target audiens</span></div>
+      <div class="load-step"><div class="step-dot" id="s1"></div><span>Menyusun fase kampanye</span></div>
+      <div class="load-step"><div class="step-dot" id="s2"></div><span>Membuat konten kalender</span></div>
+      <div class="load-step"><div class="step-dot" id="s3"></div><span>Menulis caption per platform</span></div>
+      <div class="load-step"><div class="step-dot" id="s4"></div><span>Finalisasi strategi Box Office</span></div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultsSection"></div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>Dibuat dengan ❤️ untuk industri film Indonesia &nbsp;·&nbsp; <a href="#app">Buat kampanye baru</a></p>
+</footer>
+
+<script>
+  let dur = '1 bulan';
+  let plan = null;
+  let meta = {};
+
+  function setDur(btn, val) {
+    document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    dur = val;
+  }
+  function addCast() {
+    const list = document.getElementById('castList');
+    const r = document.createElement('div');
+    r.className = 'cast-row';
+    r.innerHTML = '<input type="text" placeholder="Nama pemain" /><button class="rm" onclick="removeCast(this)" type="button">×</button>';
+    list.appendChild(r);
+  }
+  function removeCast(btn) {
+    if (document.querySelectorAll('.cast-row').length > 1) btn.parentElement.remove();
+  }
+
+  function phClass(t) {
+    return ['ph1','ph2','ph3','ph4','ph5'][parseInt(t)-1] || 'ph1';
+  }
+  const phColors = {
+    '1': { bg: 'rgba(124,111,247,0.15)', color: '#a89cf7' },
+    '2': { bg: 'rgba(52,201,138,0.12)', color: '#34c98a' },
+    '3': { bg: 'rgba(240,160,64,0.12)', color: '#f0a040' },
+    '4': { bg: 'rgba(240,80,96,0.12)', color: '#f05060' },
+    '5': { bg: 'rgba(74,168,240,0.12)', color: '#4aa8f0' },
+  };
+  const platColors = {
+    'Instagram': { bg: 'rgba(240,80,96,0.12)', color: '#f05060' },
+    'TikTok':    { bg: 'rgba(52,201,138,0.12)', color: '#34c98a' },
+    'X/Twitter': { bg: 'rgba(74,168,240,0.12)', color: '#4aa8f0' },
+    'YouTube':   { bg: 'rgba(240,80,96,0.15)', color: '#ff6060' },
+  };
+
+  function copyText(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.classList.add('copied');
+      btn.textContent = '✓ Copied';
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'Copy'; }, 1600);
+    });
+  }
+
+  async function generate() {
+    const title = document.getElementById('movieTitle').value.trim();
+    const date = document.getElementById('releaseDate').value;
+    const genre = document.getElementById('genre').value;
+    const synopsis = document.getElementById('synopsis').value.trim();
+    const err = document.getElementById('errMsg');
+    if (!title || !date || !genre || !synopsis) { err.style.display = 'block'; return; }
+    err.style.display = 'none';
+
+    const castInputs = document.querySelectorAll('.cast-row input');
+    const cast = Array.from(castInputs).map(i => i.value.trim()).filter(Boolean);
+    const relFmt = new Date(date + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    meta = { title, genre, releaseFormatted: relFmt, cast };
+
+    document.getElementById('formSection').style.display = 'none';
+    document.getElementById('loadingSection').style.display = 'block';
+    document.getElementById('app').scrollIntoView({ behavior: 'smooth' });
+
+    let step = 0;
+    const iv = setInterval(() => {
+      if (step > 0) { document.getElementById('s'+(step-1)).className = 'step-dot done'; }
+      if (step < 5) { document.getElementById('s'+step).className = 'step-dot active'; step++; }
+      else clearInterval(iv);
+    }, 1500);
+
+    const prompt = `Kamu adalah social media strategist dan content manager profesional khusus industri film Indonesia. Buat rencana kampanye konten lengkap untuk film berikut:
+
+JUDUL: ${title}
+GENRE: ${genre}
+TANGGAL TAYANG: ${relFmt}
+SINOPSIS: ${synopsis}
+PEMAIN: ${cast.length ? cast.join(', ') : 'Belum ditentukan'}
+DURASI KAMPANYE: ${dur} sebelum tayang
+
+Berikan output dalam format JSON yang valid (HANYA JSON, tidak ada teks lain, tidak ada markdown fence) dengan struktur:
+{
+  "overview": { "totalPosts": number, "platforms": ["Instagram","TikTok","X/Twitter","YouTube"], "phases": number, "targetAudience": "string singkat" },
+  "phases": [{ "name": "string", "period": "string", "goal": "string", "type": "1" }],
+  "calendar": [{ "week": "string", "phase": "string", "phaseType": "1", "theme": "string", "monday": "string atau kosong", "wednesday": "string atau kosong", "friday": "string atau kosong", "saturday": "string atau kosong", "platforms": ["array"] }],
+  "captions": [{ "title": "string", "platform": "Instagram", "phase": "string", "caption": "caption lengkap dengan hashtag" }],
+  "tipsBoxOffice": [{ "icon": "🎯", "title": "string", "desc": "string" }]
+}
+Buat 5 fase kampanye, 6-8 entri kalender, 6 caption siap posting (bervariasi platformnya), 4 tips Box Office. Caption dalam Bahasa Indonesia yang engaging, spesifik untuk film ini. phaseType harus "1" sampai "5".`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 4000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      clearInterval(iv);
+      for (let i = 0; i < 5; i++) document.getElementById('s'+i).className = 'step-dot done';
+      const data = await res.json();
+      const raw = data.content.map(b => b.text || '').join('');
+      plan = JSON.parse(raw.replace(/```json|```/g, '').trim());
+      document.getElementById('loadingSection').style.display = 'none';
+      renderResults(plan);
+    } catch(e) {
+      clearInterval(iv);
+      document.getElementById('loadingSection').style.display = 'none';
+      document.getElementById('formSection').style.display = 'block';
+      document.getElementById('errMsg').textContent = 'Gagal generate. Pastikan koneksi internet stabil lalu coba lagi.';
+      document.getElementById('errMsg').style.display = 'block';
+    }
+  }
+
+  function renderResults(p) {
+    const el = document.getElementById('resultsSection');
+    el.style.display = 'block';
+
+    const phases = (p.phases||[]).map(ph => {
+      const c = phColors[ph.type] || phColors['1'];
+      return `<div class="phase-item">
+        <span class="pbadge ${phClass(ph.type)}">${ph.name}</span>
+        <div class="pinfo"><div class="pp">${ph.period}</div><div class="pg">${ph.goal}</div></div>
+      </div>`;
+    }).join('');
+
+    const calRows = (p.calendar||[]).map(r => {
+      const days = [r.monday,r.wednesday,r.friday,r.saturday].filter(Boolean).join(' · ');
+      const ptags = (r.platforms||[]).map(pl => `<span class="ptag">${pl}</span>`).join('');
+      const c = phColors[r.phaseType] || phColors['1'];
+      return `<tr>
+        <td style="font-weight:600;white-space:nowrap">${r.week||''}</td>
+        <td><span class="pbadge ${phClass(r.phaseType)}">${r.phase||''}</span></td>
+        <td>${r.theme||''}</td>
+        <td style="font-size:12px;color:var(--muted)">${days}</td>
+        <td>${ptags}</td>
+      </tr>`;
+    }).join('');
+
+    const captions = (p.captions||[]).map(c => {
+      const pc = platColors[c.platform] || { bg: 'var(--surface2)', color: 'var(--muted)' };
+      const safe = (c.caption||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return `<div class="cap-card">
+        <div class="cap-top">
+          <div class="cap-meta">
+            <span class="cap-plat" style="background:${pc.bg};color:${pc.color}">${c.platform||''}</span>
+            <span class="cap-name">${c.title||''}</span>
+          </div>
+          <button class="copy-btn" onclick="copyText(this,${JSON.stringify(c.caption||'')})">Copy</button>
+        </div>
+        <div class="cap-text">${safe}</div>
+      </div>`;
+    }).join('');
+
+    const tips = (p.tipsBoxOffice||[]).map(t =>
+      `<div class="tip-card"><div class="tip-icon">${t.icon||'🎯'}</div><div class="tip-title">${t.title||''}</div><div class="tip-desc">${t.desc||''}</div></div>`
+    ).join('');
+
+    el.innerHTML = `
+      <div class="result-header">
+        <div>
+          <div class="result-title">${meta.title}</div>
+          <div class="result-sub">${meta.genre} · Tayang ${meta.releaseFormatted}${meta.cast.length ? ' · ' + meta.cast.join(', ') : ''}</div>
+        </div>
+        <span class="ready-badge">✓ Campaign Ready</span>
+      </div>
+      <div class="export-bar">
+        <button class="exp-btn primary" onclick="exportPDF()">⬇ Export PDF</button>
+        <button class="exp-btn secondary" onclick="printPlan()">🖨 Print / Save PDF</button>
+      </div>
+      <div class="rlabel">Ringkasan</div>
+      <div class="stats-row">
+        <div class="s-card"><div class="sn">${p.overview?.totalPosts||0}</div><div class="sl">Total Konten</div></div>
+        <div class="s-card"><div class="sn">${(p.overview?.platforms||[]).length}</div><div class="sl">Platform</div></div>
+        <div class="s-card"><div class="sn">${p.overview?.phases||0}</div><div class="sl">Fase</div></div>
+        <div class="s-card"><div class="sn" style="font-size:13px;padding-top:4px">${p.overview?.targetAudience||'-'}</div><div class="sl">Target Audiens</div></div>
+      </div>
+      <div class="rlabel">Fase Kampanye</div>
+      <div class="phases-list">${phases}</div>
+      <div class="rlabel">Konten Kalender</div>
+      <div class="cal-wrap"><table><thead><tr><th>Minggu</th><th>Fase</th><th>Tema</th><th>Jadwal Harian</th><th>Platform</th></tr></thead><tbody>${calRows}</tbody></table></div>
+      <div class="rlabel">Caption Siap Pakai</div>
+      <div class="captions-list">${captions}</div>
+      <div class="rlabel">Tips Box Office</div>
+      <div class="tips-grid">${tips}</div>
+      <div class="reset-row">
+        <button class="exp-btn ghost" onclick="resetApp()">← Buat kampanye baru</button>
+      </div>
+    `;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function exportPDF() {
+    if (!plan || !window.jspdf) { alert('Gunakan tombol Print/Save PDF sebagai alternatif.'); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pw = 210, ph = 297, ml = 15, mr = 15;
+    let y = 15;
+    const checkPage = (n) => { if (y + n > ph - 15) { doc.addPage(); y = 15; } };
+
+    doc.setFillColor(30,24,60); doc.rect(0,0,pw,36,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold'); doc.setFontSize(17);
+    doc.text('Box Office Campaign Plan', ml, 16);
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.text(`${meta.title}  ·  ${meta.genre}  ·  Tayang ${meta.releaseFormatted}`, ml, 24);
+    doc.setFontSize(8); doc.setTextColor(160,150,220);
+    doc.text(`Generated ${new Date().toLocaleDateString('id-ID')}`, pw-mr, 24, {align:'right'});
+    y = 46;
+
+    const sh = (txt) => {
+      checkPage(12);
+      doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(124,111,247);
+      doc.text(txt.toUpperCase(), ml, y); y += 2;
+      doc.setDrawColor(60,50,100); doc.line(ml, y+2, pw-mr, y+2); y += 7;
+    };
+
+    const cols = [22,30,50,57,36];
+    const bw = (pw-ml-mr-9)/4;
+    const sv = [String(plan.overview?.totalPosts||0), String((plan.overview?.platforms||[]).length), String(plan.overview?.phases||0), plan.overview?.targetAudience||'-'];
+    const sl = ['Total Konten','Platform','Fase','Target Audiens'];
+    sv.forEach((v,i) => {
+      const bx = ml + i*(bw+3);
+      doc.setFillColor(30,25,55); doc.roundedRect(bx,y,bw,18,2,2,'F');
+      if (v.length > 5) {
+        doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(200,195,255);
+        doc.text(doc.splitTextToSize(v,bw-4), bx+bw/2, y+8, {align:'center'});
+      } else {
+        doc.setFontSize(14); doc.setFont('helvetica','bold'); doc.setTextColor(124,111,247);
+        doc.text(v, bx+bw/2, y+11, {align:'center'});
+      }
+      doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(130,120,180);
+      doc.text(sl[i], bx+bw/2, y+16, {align:'center'});
+    });
+    y += 24;
+
+    sh('Fase Kampanye');
+    const phc = {'1':[124,111,247],'2':[52,201,138],'3':[240,160,64],'4':[240,80,96],'5':[74,168,240]};
+    (plan.phases||[]).forEach(p => {
+      checkPage(12);
+      const c = phc[p.type]||[124,111,247];
+      doc.setFillColor(...c); doc.roundedRect(ml,y,28,5.5,1.5,1.5,'F');
+      doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+      doc.text(p.name||'', ml+14, y+3.8, {align:'center'});
+      doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(130,120,180);
+      doc.text(p.period||'', ml+32, y+2.5);
+      doc.setTextColor(220,215,240);
+      const gl = doc.splitTextToSize(p.goal||'', pw-ml-mr-34);
+      doc.text(gl, ml+32, y+5.5);
+      y += Math.max(10, gl.length*3.8+4);
+    });
+    y += 4;
+
+    sh('Konten Kalender');
+    doc.setFillColor(25,20,50); doc.rect(ml,y,pw-ml-mr,7,'F');
+    doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(124,111,247);
+    let cx = ml;
+    ['Minggu','Fase','Tema','Jadwal Harian','Platform'].forEach((h,i) => { doc.text(h,cx+2,y+4.8); cx+=cols[i]; });
+    y += 7;
+    (plan.calendar||[]).forEach((r,ri) => {
+      const days = [r.monday,r.wednesday,r.friday,r.saturday].filter(Boolean).join(', ');
+      const plat = (r.platforms||[]).join(', ');
+      const tl = doc.splitTextToSize(r.theme||'', cols[2]-3);
+      const dl = doc.splitTextToSize(days, cols[3]-3);
+      const rh = Math.max(8, tl.length*3.8+3, dl.length*3.8+3);
+      checkPage(rh+2);
+      if (ri%2===0) { doc.setFillColor(20,18,38); doc.rect(ml,y,pw-ml-mr,rh,'F'); }
+      cx = ml; doc.setFontSize(7.5);
+      const c = phc[r.phaseType]||[124,111,247];
+      doc.setFont('helvetica','bold'); doc.setTextColor(200,200,220); doc.text(r.week||'',cx+2,y+5); cx+=cols[0];
+      doc.setFillColor(...c); doc.roundedRect(cx+1,y+1.5,cols[1]-3,5,1.5,1.5,'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold');
+      doc.text(doc.splitTextToSize(r.phase||'',cols[1]-5)[0],cx+2,y+5.2); cx+=cols[1];
+      doc.setTextColor(200,200,220); doc.setFont('helvetica','normal'); doc.text(tl,cx+2,y+4.5); cx+=cols[2];
+      doc.setTextColor(130,120,180); doc.text(dl,cx+2,y+4.5); cx+=cols[3];
+      doc.setTextColor(124,111,247); doc.text(doc.splitTextToSize(plat,cols[4]-3),cx+2,y+4.5);
+      y += rh;
+      doc.setDrawColor(35,30,60); doc.line(ml,y,pw-mr,y);
+    });
+    y += 6;
+
+    sh('Caption Siap Pakai');
+    (plan.captions||[]).forEach(c => {
+      const tl = doc.splitTextToSize(c.caption||'', pw-ml-mr-6);
+      const cardH = tl.length*4+14;
+      checkPage(cardH+4);
+      doc.setFillColor(22,20,42); doc.roundedRect(ml,y,pw-ml-mr,cardH,3,3,'F');
+      doc.setDrawColor(70,60,140); doc.roundedRect(ml,y,pw-ml-mr,cardH,3,3,'S');
+      doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(124,111,247);
+      doc.text(`${c.platform||''} · ${c.title||''}`, ml+4, y+6);
+      doc.setFont('helvetica','normal'); doc.setTextColor(200,200,220);
+      doc.text(tl, ml+4, y+12);
+      y += cardH + 4;
+    });
+
+    sh('Tips Box Office');
+    (plan.tipsBoxOffice||[]).forEach(t => {
+      checkPage(14);
+      doc.setFillColor(22,20,42); doc.roundedRect(ml,y,pw-ml-mr,12,2,2,'F');
+      doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(124,111,247);
+      doc.text(t.title||'', ml+4, y+5);
+      doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(160,150,200);
+      const dl = doc.splitTextToSize(t.desc||'', pw-ml-mr-8);
+      doc.text(dl, ml+4, y+9.5);
+      y += Math.max(14, dl.length*3.8+7);
+    });
+
+    const total = doc.internal.getNumberOfPages();
+    for (let pg = 1; pg <= total; pg++) {
+      doc.setPage(pg);
+      doc.setFillColor(30,24,60); doc.rect(0,ph-9,pw,9,'F');
+      doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(160,150,220);
+      doc.text(`${meta.title} — Box Office Campaign Plan`, ml, ph-3.5);
+      doc.text(`${pg} / ${total}`, pw-mr, ph-3.5, {align:'right'});
+    }
+    const fname = meta.title.replace(/[^a-zA-Z0-9]/g,'-').toLowerCase();
+    doc.save(`campaign-${fname}.pdf`);
+  }
+
+  function printPlan() {
+    if (!plan) return;
+    const ph = phColors;
+    const platC = platColors;
+    let phases = (plan.phases||[]).map(p => {
+      const c = ph[p.type]||ph['1'];
+      return `<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;padding:8px;background:#f8f7ff;border-radius:8px">
+        <span style="background:${c.bg};color:${c.color};padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap">${p.name}</span>
+        <div><div style="font-size:11px;color:#888">${p.period}</div><div style="font-size:12px">${p.goal}</div></div>
+      </div>`;
+    }).join('');
+    let calRows = (plan.calendar||[]).map(r => {
+      const days = [r.monday,r.wednesday,r.friday,r.saturday].filter(Boolean).join(', ');
+      const c = ph[r.phaseType]||ph['1'];
+      return `<tr><td style="font-weight:600">${r.week||''}</td>
+        <td><span style="background:${c.bg};color:${c.color};padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${r.phase||''}</span></td>
+        <td>${r.theme||''}</td><td style="font-size:11px;color:#666">${days}</td>
+        <td style="font-size:11px">${(r.platforms||[]).join(', ')}</td></tr>`;
+    }).join('');
+    let captions = (plan.captions||[]).map(c => {
+      const pc = platC[c.platform]||{bg:'#f0f0ff',color:'#534AB7'};
+      return `<div style="border:1px solid #e0dff8;border-radius:8px;padding:12px;margin-bottom:10px;page-break-inside:avoid">
+        <div style="margin-bottom:6px"><span style="background:${pc.bg};color:${pc.color};padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700">${c.platform||''}</span>
+        <span style="font-size:12px;color:#666;margin-left:6px">${c.title||''}</span></div>
+        <div style="font-size:12px;line-height:1.7;white-space:pre-wrap">${(c.caption||'').replace(/</g,'&lt;')}</div>
+      </div>`;
+    }).join('');
+    let tips = (plan.tipsBoxOffice||[]).map(t =>
+      `<div style="background:#f8f7ff;border-radius:8px;padding:10px;page-break-inside:avoid">
+        <div style="font-size:16px;margin-bottom:4px">${t.icon||''}</div>
+        <div style="font-weight:700;font-size:12px;color:#534AB7;margin-bottom:3px">${t.title||''}</div>
+        <div style="font-size:11px;color:#555;line-height:1.5">${t.desc||''}</div>
+      </div>`
+    ).join('');
+
+    const win = window.open('','_blank');
+    win.document.write(`<!DOCTYPE html><html><head><title>Campaign Plan — ${meta.title}</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#222;font-size:13px}
+.hdr{background:#1e1838;color:#fff;padding:24px 32px}.hdr h1{font-size:20px;font-weight:700;margin-bottom:4px}.hdr p{font-size:12px;opacity:.75}
+.body{padding:24px 32px}.sec{margin-bottom:22px}.slbl{font-size:10px;font-weight:700;color:#888;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #eee}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}.stat{background:#f8f7ff;border-radius:8px;padding:12px;text-align:center}.stat .n{font-size:20px;font-weight:700;color:#534AB7}.stat .l{font-size:10px;color:#888;margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:12px}th{background:#f0effd;color:#3C3489;padding:6px 8px;text-align:left;font-size:11px}td{padding:6px 8px;border-bottom:1px solid #f0f0f0;vertical-align:top}
+.tips{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ftr{background:#1e1838;color:#a89cf7;padding:8px 32px;font-size:10px;display:flex;justify-content:space-between;margin-top:20px}
+@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}
+</style></head><body>
+<div class="hdr"><h1>${meta.title}</h1><p>${meta.genre} · Tayang ${meta.releaseFormatted}${meta.cast.length?' · '+meta.cast.join(', '):''}</p><p style="margin-top:5px;opacity:.5;font-size:11px">Box Office Campaign Plan · ${new Date().toLocaleDateString('id-ID')}</p></div>
+<div class="body">
+<div class="stats">
+  <div class="stat"><div class="n">${plan.overview?.totalPosts||0}</div><div class="l">Total Konten</div></div>
+  <div class="stat"><div class="n">${(plan.overview?.platforms||[]).length}</div><div class="l">Platform</div></div>
+  <div class="stat"><div class="n">${plan.overview?.phases||0}</div><div class="l">Fase</div></div>
+  <div class="stat"><div class="n" style="font-size:12px;padding-top:4px">${plan.overview?.targetAudience||'-'}</div><div class="l">Target Audiens</div></div>
+</div>
+<div class="sec"><div class="slbl">Fase Kampanye</div>${phases}</div>
+<div class="sec"><div class="slbl">Konten Kalender</div><table><thead><tr><th>Minggu</th><th>Fase</th><th>Tema</th><th>Jadwal Harian</th><th>Platform</th></tr></thead><tbody>${calRows}</tbody></table></div>
+<div class="sec"><div class="slbl">Caption Siap Pakai</div>${captions}</div>
+<div class="sec"><div class="slbl">Tips Box Office</div><div class="tips">${tips}</div></div>
+</div>
+<div class="ftr"><span>${meta.title} — Box Office Campaign Plan</span><span>${new Date().toLocaleDateString('id-ID')}</span></div>
+<script>window.onload=()=>window.print()<\/script></body></html>`);
+    win.document.close();
+  }
+
+  function resetApp() {
+    document.getElementById('resultsSection').style.display = 'none';
+    document.getElementById('resultsSection').innerHTML = '';
+    document.getElementById('formSection').style.display = 'block';
+    plan = null;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>
