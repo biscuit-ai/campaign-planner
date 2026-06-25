@@ -376,47 +376,127 @@
       else clearInterval(iv);
     }, 1500);
 
-    const filmData = `JUDUL: ${title}\nGENRE: ${genre}\nTANGGAL TAYANG: ${relFmt}\nSINOPSIS: ${synopsis}\nPEMAIN: ${cast.length ? cast.join(', ') : 'Belum ditentukan'}\nDURASI KAMPANYE: ${dur} sebelum tayang`;
+    const filmInfo = `JUDUL: ${title} | GENRE: ${genre} | TAYANG: ${relFmt} | PEMAIN: ${cast.length ? cast.join(', ') : '-'} | DURASI KAMPANYE: ${dur}`;
 
-    // Prompt 1: Struktur kampanye (lebih pendek, tidak akan kepotong)
-    const prompt1 = `Kamu adalah social media strategist untuk industri film Indonesia.
+    // Call 1: Struktur (overview + phases + calendar) - JSON pendek, aman
+    const promptStruktur = `Social media strategist film Indonesia. Data film: ${filmInfo}. Sinopsis: ${synopsis}
 
-${filmData}
+BALAS HANYA JSON. Buat 5 fase kampanye dan 7 minggu kalender.
+{"overview":{"totalPosts":28,"platforms":["Instagram","TikTok","X/Twitter","YouTube"],"phases":5,"targetAudience":"remaja dewasa 17-30 tahun"},"phases":[{"name":"Awareness","period":"4 minggu sebelum","goal":"bangun pengenalan film","type":"1"},{"name":"Excitement","period":"3 minggu sebelum","goal":"tingkatkan antusiasme","type":"2"},{"name":"Engagement","period":"2 minggu sebelum","goal":"interaksi audiens","type":"3"},{"name":"Pre-Launch","period":"1 minggu sebelum","goal":"dorong pembelian tiket","type":"4"},{"name":"Launch","period":"minggu tayang","goal":"maksimalkan penonton","type":"5"}],"calendar":[{"week":"Minggu 1","phase":"Awareness","phaseType":"1","theme":"Perkenalan karakter","monday":"Post foto poster","wednesday":"Quote karakter","friday":"Behind the scenes","saturday":"Poll Instagram story","platforms":["Instagram","TikTok"]},{"week":"Minggu 2","phase":"Awareness","phaseType":"1","theme":"Teaser storyline","monday":"Video teaser 15 detik","wednesday":"Thread X misteri","friday":"TikTok challenge launch","saturday":"Countdown story","platforms":["TikTok","X/Twitter"]},{"week":"Minggu 3","phase":"Excitement","phaseType":"2","theme":"Trailer resmi","monday":"Drop trailer resmi","wednesday":"Reaksi pemain","friday":"Fan art contest","saturday":"Live IG pemain","platforms":["Instagram","YouTube"]},{"week":"Minggu 4","phase":"Engagement","phaseType":"3","theme":"Interaksi fans","monday":"Q&A karakter","wednesday":"Tebak adegan","friday":"UGC showcase","saturday":"Hitung mundur","platforms":["Instagram","TikTok"]},{"week":"Minggu 5","phase":"Pre-Launch","phaseType":"4","theme":"Tiket tersedia","monday":"Link tiket buka","wednesday":"Review media","friday":"Red carpet content","saturday":"Final push story","platforms":["Instagram","X/Twitter"]},{"week":"Minggu 6","phase":"Launch","phaseType":"5","theme":"Hari tayang","monday":"Post hari pertama","wednesday":"Testimonial penonton","friday":"Box office update","saturday":"Terima kasih fans","platforms":["Instagram","TikTok","YouTube"]},{"week":"Minggu 7","phase":"Launch","phaseType":"5","theme":"Momentum tayang","monday":"Momen viral","wednesday":"Pencapaian penonton","friday":"Perpanjangan tayang","saturday":"Wrap up campaign","platforms":["Instagram","YouTube"]}]}
 
-Balas HANYA JSON valid tanpa teks lain. Struktur:
-{"overview":{"totalPosts":number,"platforms":["Instagram","TikTok","X/Twitter","YouTube"],"phases":number,"targetAudience":"maks 6 kata"},"phases":[{"name":"maks 3 kata","period":"string","goal":"maks 10 kata","type":"1"}],"calendar":[{"week":"Minggu 1","phase":"string","phaseType":"1","theme":"maks 8 kata","monday":"maks 8 kata","wednesday":"maks 8 kata","friday":"maks 8 kata","saturday":"","platforms":["Instagram"]}]}
-Buat 5 fase (type "1"-"5") dan 7 entri kalender. String harus SINGKAT.`;
+Sesuaikan konten di atas dengan data film yang diberikan. Balas hanya JSON.`;
 
-    // Prompt 2: Caption & tips saja
-    const prompt2 = `Kamu adalah social media copywriter untuk industri film Indonesia.
+    // Call 2: Caption per platform - plain text, tidak bisa corrupt
+    const promptCaption = `Social media copywriter film Indonesia. Data: ${filmInfo}. Sinopsis: ${synopsis}
 
-${filmData}
+Tulis 6 caption siap posting dalam Bahasa Indonesia yang engaging. Format PERSIS seperti ini:
 
-Balas HANYA JSON valid tanpa teks lain. Struktur:
-{"captions":[{"title":"string","platform":"Instagram","phase":"string","caption":"caption bahasa Indonesia dengan hashtag"}],"tipsBoxOffice":[{"icon":"🎯","title":"string","desc":"maks 20 kata"}]}
-Buat 6 caption (2 Instagram, 2 TikTok, 1 X/Twitter, 1 YouTube) dan 4 tips Box Office. Caption boleh panjang dan kreatif.`;
+===CAPTION_1===
+PLATFORM: Instagram
+JUDUL: [judul konten]
+FASE: Awareness
+[caption lengkap dengan emoji dan hashtag]
+===END===
 
-    const callAPI = async (prompt) => {
+===CAPTION_2===
+PLATFORM: TikTok
+JUDUL: [judul konten]
+FASE: Excitement
+[caption lengkap dengan emoji dan hashtag]
+===END===
+
+===CAPTION_3===
+PLATFORM: Instagram
+JUDUL: [judul konten]
+FASE: Pre-Launch
+[caption lengkap dengan emoji dan hashtag]
+===END===
+
+===CAPTION_4===
+PLATFORM: TikTok
+JUDUL: [judul konten]
+FASE: Launch
+[caption lengkap dengan emoji dan hashtag]
+===END===
+
+===CAPTION_5===
+PLATFORM: X/Twitter
+JUDUL: [judul konten]
+FASE: Engagement
+[caption pendek maks 280 karakter dengan hashtag]
+===END===
+
+===CAPTION_6===
+PLATFORM: YouTube
+JUDUL: [judul konten]
+FASE: Launch
+[deskripsi video YouTube lengkap dengan hashtag]
+===END===
+
+Tulis caption yang spesifik untuk film ini, kreatif, dan sesuai karakter masing-masing platform.`;
+
+    // Call 3: Tips Box Office - JSON sangat pendek
+    const promptTips = `Content strategist film Indonesia. Film: ${filmInfo}.
+
+BALAS HANYA JSON 4 tips Box Office:
+{"tipsBoxOffice":[{"icon":"🎯","title":"Maksimalkan Opening Weekend","desc":"Fokus semua effort di 3 hari pertama tayang karena menentukan perpanjangan jadwal bioskop"},{"icon":"📱","title":"TikTok Organic Viral","desc":"Buat challenge atau sound original yang mudah ditiru penonton untuk efek snowball organik"},{"icon":"🤝","title":"Kolaborasi Micro Influencer","desc":"10 micro influencer lebih efektif dari 1 mega influencer untuk jangkauan komunitas lokal"},{"icon":"🎟️","title":"Group Booking Campaign","desc":"Dorong nonton bareng komunitas dengan diskon group untuk isi kursi di hari weekday"}]}
+
+Sesuaikan tips dengan genre dan target film di atas.`;
+
+    const callAPI = async (prompt, expectJSON) => {
       const res = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 3000,
+          max_tokens: 2500,
           messages: [{ role: 'user', content: prompt }]
         })
       });
       const data = await res.json();
       if (data.error) throw new Error(JSON.stringify(data.error));
-      const raw = data.content.map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
-      return JSON.parse(raw);
+      return data.content.map(b => b.text || '').join('').trim();
+    };
+
+    const parseCaption = (text) => {
+      const captions = [];
+      const blocks = text.split('===CAPTION_').slice(1);
+      for (const block of blocks) {
+        const end = block.indexOf('===END===');
+        if (end === -1) continue;
+        const inner = block.substring(block.indexOf('\n') + 1, end).trim();
+        const lines = inner.split('\n');
+        let platform = '', title = '', phase = '', captionLines = [];
+        let inCaption = false;
+        for (const line of lines) {
+          if (line.startsWith('PLATFORM:')) { platform = line.replace('PLATFORM:', '').trim(); }
+          else if (line.startsWith('JUDUL:')) { title = line.replace('JUDUL:', '').trim(); }
+          else if (line.startsWith('FASE:')) { phase = line.replace('FASE:', '').trim(); inCaption = true; }
+          else if (inCaption) { captionLines.push(line); }
+        }
+        if (platform && title) {
+          captions.push({ platform, title, phase, caption: captionLines.join('\n').trim() });
+        }
+      }
+      return captions;
     };
 
     try {
-      const [part1, part2] = await Promise.all([callAPI(prompt1), callAPI(prompt2)]);
+      const [resStruktur, resCaption, resTips] = await Promise.all([
+        callAPI(promptStruktur),
+        callAPI(promptCaption),
+        callAPI(promptTips)
+      ]);
+
       clearInterval(iv);
       for (let i = 0; i < 5; i++) document.getElementById('s'+i).className = 'step-dot done';
-      plan = { ...part1, ...part2 };
+
+      const struktur = JSON.parse(resStruktur.replace(/```json|```/g, '').trim());
+      const tips = JSON.parse(resTips.replace(/```json|```/g, '').trim());
+      const captions = parseCaption(resCaption);
+
+      plan = { ...struktur, captions, tipsBoxOffice: tips.tipsBoxOffice };
+
       document.getElementById('loadingSection').style.display = 'none';
       renderResults(plan);
     } catch(e) {
