@@ -393,6 +393,20 @@ tr:hover td { background: rgba(255,255,255,.02); }
       <p id="timingHint" style="font-size:0.75rem;color:var(--gold);margin-top:6px;display:none"></p>
     </div>
 
+    <div class="form-group">
+      <label for="extraNotes">Catatan Tambahan <span class="opt">(opsional tapi powerful)</span></label>
+      <textarea id="extraNotes" placeholder="Tulis detail tambahan yang mempengaruhi strategi konten...
+
+Contoh:
+• Film ini tayang di OTT KlikFilm (bukan Netflix/Vidio)
+• Sutradara: Angga Dwimas Sasongko, fanbase kritikus film
+• Ada kolaborasi brand dengan Indomie (product placement)
+• Tim konten hanya 2 orang, hindari ide yang butuh banyak produksi
+• Jangan sebut nama kompetitor film yang tayang bersamaan
+• Target kota utama: Jakarta, Surabaya, Medan" style="min-height:120px;font-size:0.85rem;line-height:1.7"></textarea>
+      <p style="font-size:0.75rem;color:var(--muted);margin-top:6px">💡 Semakin detail catatanmu, semakin spesifik dan akurat output AI yang dihasilkan.</p>
+    </div>
+
     <p class="err" id="errMsg">Harap isi Judul, Sinopsis, Genre, dan Tanggal Tayang.</p>
     <button class="btn" id="genBtn">✦ Generate Campaign Plan</button>
   </div>
@@ -408,6 +422,20 @@ tr:hover td { background: rgba(255,255,255,.02); }
   </div>
 
   <div id="resultsSection"></div>
+</div>
+
+<!-- HISTORY MODAL -->
+<div id="historyModal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);overflow-y:auto;padding:2rem 1rem">
+  <div style="max-width:820px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+      <div>
+        <h2 style="font-family:'Sora',sans-serif;font-size:1.5rem;color:#fff">📚 Campaign History</h2>
+        <p style="font-size:0.85rem;color:#888899;margin-top:3px">Tersimpan lokal di browser kamu — maks 6 kampanye</p>
+      </div>
+      <button id="closeHistory" style="background:none;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 16px;color:#888899;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.85rem">✕ Tutup</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
 </div>
 
 <script>
@@ -644,13 +672,14 @@ async function generate() {
   const genre    = document.getElementById('movieGenre').value;
   const date     = document.getElementById('releaseDate').value;
   const cast     = document.getElementById('movieCast').value.trim();
+  const notes    = document.getElementById('extraNotes').value.trim();
   const err      = document.getElementById('errMsg');
 
   if (!title || !synopsis || !genre || !date) { err.style.display = 'block'; return; }
   err.style.display = 'none';
 
   const relFmt = new Date(date + 'T00:00:00').toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'});
-  meta = { title, genre, releaseFormatted: relFmt, cast };
+  meta = { title, genre, releaseFormatted: relFmt, cast, notes };
 
   document.getElementById('formSection').style.display = 'none';
   document.getElementById('loadingSection').style.display = 'block';
@@ -705,12 +734,16 @@ async function generate() {
     : 'TIPE: Bioskop/Theatrical Premiere — tayang perdana. Strategi: build hype maksimal, FOMO opening weekend, dorong beli tiket. Tone: "pengalaman sinema yang tidak bisa dilewatkan".';
 
   // Master context untuk semua prompt
+  const notesCtx = notes
+    ? 'CATATAN KHUSUS DARI TIM (WAJIB DIIKUTI):\n' + notes + '\n'
+    : '';
   const masterCtx = 'TARGET AUDIENS: ' + audienceCtx + '.\n'
     + 'TONE OF VOICE: ' + toneCtx + '.\n'
     + 'MOOD FILM: ' + moodCtx + '.\n'
     + 'BUDGET: ' + budgetCtx + '.\n'
     + 'HOOK UTAMA: ' + uspCtx + '.\n'
-    + releaseCtx;
+    + releaseCtx
+    + (notesCtx ? '\n' + notesCtx : '');
   // isOTT and releaseCtx now handled in masterCtx above
   const _skip = isOTT
     ? 'skip (film sudah pernah tayang di bioskop, sekarang hadir di platform streaming). Strategi: re-engagement penonton lama + akuisisi penonton baru yang belum sempat nonton. Tone: "Sekarang bisa nonton di rumah". Fokus: convenience, aksesibilitas, binge-watch.'
@@ -1007,7 +1040,9 @@ function renderResults() {
     + '<span style="font-size:0.7rem;padding:2px 8px;border-radius:20px;background:rgba(209,161,83,.12);color:var(--gold)">' + params.tone.toUpperCase() + '</span>'
     + '<span style="font-size:0.7rem;padding:2px 8px;border-radius:20px;background:rgba(209,161,83,.12);color:var(--gold)">' + params.mood.toUpperCase() + '</span>'
     + '<span style="font-size:0.7rem;padding:2px 8px;border-radius:20px;background:rgba(209,161,83,.12);color:var(--gold)">' + params.budget.toUpperCase() + ' BUDGET</span>'
-    + '</div></div>'
+    + (meta.notes ? '<div style="margin-top:10px;padding:10px 12px;background:rgba(209,161,83,0.06);border:1px solid rgba(209,161,83,0.2);border-radius:8px;font-size:0.78rem;color:#d1a153">'
+    + '<span style="font-weight:600">📝 Catatan: </span><span style="color:#f0f0f4">' + meta.notes.replace(/</g,'&lt;') + '</span></div>' : '')
+    + '</div>'
     + '<span class="ready">✓ Campaign Ready</span>'
     + '</div>'
     + '<div class="stats-row">'
@@ -1026,12 +1061,16 @@ function renderResults() {
     + '<div class="tips-grid">' + tips + '</div>'
     + '<div class="btn-group">'
     + '<button class="btn-sec" id="btnReset">← Buat Baru</button>'
-    + '<button class="btn-sec" id="btnPrint">🖨 Print / Save PDF</button>'
+    + '<button class="btn-sec" id="btnHistory">📚 History</button>'
+    + '<button class="btn-sec" id="btnSave">💾 Save</button>'
+    + '<button class="btn-sec" id="btnPrint">🖨 Print</button>'
     + '<button class="btn" id="btnPDF">⬇ Export PDF</button>'
     + '</div>'
     + '</div>';
   // Attach result button listeners
   document.getElementById('btnReset').addEventListener('click', resetApp);
+  document.getElementById('btnSave').addEventListener('click', saveToHistory);
+  document.getElementById('btnHistory').addEventListener('click', showHistory);
   document.getElementById('btnPrint').addEventListener('click', printPlan);
   document.getElementById('btnPDF').addEventListener('click', exportPDF);
   document.querySelectorAll('.copy-btn').forEach(btn => {
@@ -1047,6 +1086,7 @@ function resetApp() {
   document.getElementById('resultsSection').style.display = 'none';
   document.getElementById('resultsSection').innerHTML = '';
   document.getElementById('formSection').style.display = 'block';
+  const notesEl = document.getElementById('extraNotes'); if (notesEl) notesEl.value = '';
   plan = null;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1128,53 +1168,430 @@ function printPlan() {
   win.document.write(html);
   win.document.close();
 }
+// ─── HISTORY ──────────────────────────────────────────────────────
+const HISTORY_KEY = 'cp_history';
+const MAX_HISTORY = 6;
+
+function saveToHistory() {
+  if (!plan || !meta) return;
+  const btn = document.getElementById('btnSave');
+
+  const entry = {
+    id:        Date.now(),
+    savedAt:   new Date().toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'}),
+    title:     meta.title,
+    notes:     meta.notes || '',
+    genre:     meta.genre,
+    releaseFormatted: meta.releaseFormatted,
+    cast:      meta.cast,
+    timing,
+    releaseType,
+    dur,
+    durDays,
+    params:    { ...params },
+    plan:      {
+      overview:      plan.overview,
+      phases:        plan.phases,
+      days:          plan.days,
+      captions:      plan.captions,
+      tipsBoxOffice: plan.tipsBoxOffice
+    }
+  };
+
+  let history = getHistory();
+  // Remove duplicate if same title exists
+  history = history.filter(h => h.title !== meta.title);
+  history.unshift(entry);
+  if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+
+  if (btn) {
+    btn.textContent = '✓ Tersimpan!';
+    btn.style.borderColor = 'var(--green)';
+    btn.style.color = 'var(--green)';
+    setTimeout(() => {
+      btn.textContent = '💾 Save';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    }, 2000);
+  }
+}
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+
+function showHistory() {
+  const history = getHistory();
+  const modal   = document.getElementById('historyModal');
+  const list    = document.getElementById('historyList');
+
+  if (!history.length) {
+    list.innerHTML = '<div style="text-align:center;padding:3rem;color:#888899"><div style="font-size:3rem;margin-bottom:1rem">📭</div><div style="font-size:1rem;font-weight:600;color:#f0f0f4">Belum ada campaign tersimpan</div><div style="font-size:0.85rem;margin-top:6px">Klik "💾 Save" setelah generate untuk menyimpan</div></div>';
+  } else {
+    const phColors = {'1':'rgba(209,161,83,.18)','2':'rgba(78,239,178,.12)','3':'rgba(255,120,80,.12)','4':'rgba(120,160,255,.12)','5':'rgba(220,120,255,.12)'};
+    const phText   = {'1':'#d1a153','2':'#4eefb2','3':'#ff7850','4':'#78a0ff','5':'#dc78ff'};
+    list.innerHTML = history.map(h => {
+      const timingLabel = h.timing === 'before' ? '⏮ Before' : h.timing === 'after' ? '⏭ After' : '⏯ Before+After';
+      const rtLabel     = h.releaseType === 'ott' ? '📺 OTT' : '🎬 Bioskop';
+      const phases = (h.plan.phases||[]).map(p =>
+        '<span style="font-size:0.7rem;padding:2px 8px;border-radius:20px;background:'+( phColors[p.type]||phColors['1'])+';color:'+(phText[p.type]||phText['1'])+';margin-right:4px">'+p.name+'</span>'
+      ).join('');
+      const captionCount = (h.plan.captions||[]).length;
+      const dayCount     = (h.plan.days||[]).length;
+      return '<div style="background:#13141a;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;margin-bottom:12px">'
+        + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">'
+        + '<div>'
+        + '<div style="font-family:\'Sora\',sans-serif;font-size:1.1rem;font-weight:700;color:#f0f0f4;margin-bottom:4px">'+h.title+'</div>'
+        + '<div style="font-size:0.8rem;color:#888899">'+h.genre+' · Tayang '+h.releaseFormatted+(h.cast?' · '+h.cast:'')+'</div>'
+        + '</div>'
+        + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+        + '<span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,0.06);color:#888899">'+rtLabel+'</span>'
+        + '<span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,0.06);color:#888899">'+timingLabel+'</span>'
+        + '<span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,0.06);color:#888899">'+h.dur+' Minggu</span>'
+        + '</div>'
+        + '</div>'
+        + '<div style="margin-bottom:12px">'+phases+'</div>'
+        + (h.notes ? '<div style="margin-bottom:10px;padding:8px 10px;background:rgba(209,161,83,0.06);border-left:2px solid rgba(209,161,83,0.4);border-radius:0 6px 6px 0;font-size:0.75rem">'
++ '<span style="color:#d1a153;font-weight:600">📝 </span><span style="color:#f0f0f4">' + h.notes.substring(0,120) + (h.notes.length > 120 ? '...' : '') + '</span></div>' : '')
++ '<div style="display:flex;gap:16px;margin-bottom:16px">'
+        + '<div style="text-align:center"><div style="font-size:1.2rem;font-weight:700;color:#d1a153">'+dayCount*2+'</div><div style="font-size:0.7rem;color:#888899">Total Konten</div></div>'
+        + '<div style="text-align:center"><div style="font-size:1.2rem;font-weight:700;color:#d1a153">'+dayCount+'</div><div style="font-size:0.7rem;color:#888899">Hari</div></div>'
+        + '<div style="text-align:center"><div style="font-size:1.2rem;font-weight:700;color:#d1a153">'+captionCount+'</div><div style="font-size:0.7rem;color:#888899">Caption</div></div>'
+        + '<div style="margin-left:auto;text-align:right"><div style="font-size:0.7rem;color:#888899">Disimpan</div><div style="font-size:0.78rem;color:#f0f0f4">'+h.savedAt+'</div></div>'
+        + '</div>'
+        + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+        + '<button onclick="loadHistory('+h.id+')" style="background:#d1a153;color:#000;border:none;border-radius:8px;padding:8px 16px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif">▶ Buka Kembali</button>'
+        + '<button onclick="exportHistoryPDF('+h.id+')" style="background:none;border:1px solid rgba(255,255,255,0.14);border-radius:8px;padding:8px 16px;font-size:0.82rem;color:#f0f0f4;cursor:pointer;font-family:\'Inter\',sans-serif">⬇ Export PDF</button>'
+        + '<button onclick="deleteHistory('+h.id+')" style="background:none;border:1px solid rgba(255,80,80,0.25);border-radius:8px;padding:8px 14px;font-size:0.82rem;color:#ff5060;cursor:pointer;font-family:\'Inter\',sans-serif;margin-left:auto">🗑</button>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function hideHistory() {
+  document.getElementById('historyModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function loadHistory(id) {
+  const h = getHistory().find(x => x.id === id);
+  if (!h) return;
+  hideHistory();
+  meta        = { title: h.title, genre: h.genre, releaseFormatted: h.releaseFormatted, cast: h.cast, notes: h.notes || '' };
+  plan        = h.plan;
+  dur         = h.dur;
+  durDays     = h.durDays;
+  timing      = h.timing || 'before';
+  releaseType = h.releaseType || 'bioskop';
+  if (h.params) Object.assign(params, h.params);
+  document.getElementById('formSection').style.display = 'none';
+  document.getElementById('resultsSection').style.display = 'block';
+  renderResults();
+  document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+function deleteHistory(id) {
+  if (!confirm('Hapus kampanye ini dari history?')) return;
+  let history = getHistory().filter(h => h.id !== id);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  showHistory(); // refresh
+}
+
+function exportHistoryPDF(id) {
+  const h = getHistory().find(x => x.id === id);
+  if (!h) return;
+  // Temporarily set globals then export
+  const prevMeta = { ...meta };
+  const prevPlan = plan;
+  meta = { title: h.title, genre: h.genre, releaseFormatted: h.releaseFormatted, cast: h.cast };
+  plan = h.plan;
+  exportPDF();
+  // Restore
+  setTimeout(() => { meta = prevMeta; plan = prevPlan; }, 500);
+}
+
+// ─── EXPORT PDF (PREMIUM) ────────────────────────────────────────
 function exportPDF() {
   if (!plan || !window.jspdf) { printPlan(); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'mm', format:'a4' });
-  const pw=210, ph=297, ml=15, mr=15; let y=15;
-  const chk = n => { if(y+n>ph-12){doc.addPage();y=15;} };
-  const ph_rgb = {'1':[209,161,83],'2':[78,200,140],'3':[255,120,80],'4':[120,160,255],'5':[220,120,255]};
+  const pw = 210, ph = 297, ml = 16, mr = 16;
+  let y = 0;
 
-  doc.setFillColor(26,18,6); doc.rect(0,0,pw,34,'F');
-  doc.setTextColor(209,161,83); doc.setFont('helvetica','bold'); doc.setFontSize(16);
-  doc.text('Box Office Campaign Plan', ml, 14);
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(180,150,80);
-  doc.text(meta.title+"  ·  "+meta.genre+"  ·  Tayang "+meta.releaseFormatted, ml, 22);
-  doc.setTextColor(120,100,60);
-  doc.text(new Date().toLocaleDateString('id-ID'), pw-mr, 22, {align:'right'});
-  y = 44;
+  const GOLD   = [209, 161, 83];
+  const DARK   = [11, 12, 16];
+  const DARK2  = [19, 20, 26];
+  const DARK3  = [26, 27, 35];
+  const TEXT   = [240, 240, 244];
+  const MUTED  = [136, 136, 153];
+  const GREEN  = [78, 200, 140];
+  const phRGB  = { '1':[209,161,83],'2':[78,200,140],'3':[255,120,80],'4':[120,160,255],'5':[220,120,255] };
 
-  const sec = t => { chk(10); doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(180,140,60); doc.text(t.toUpperCase(),ml,y); doc.setDrawColor(60,50,20); doc.line(ml,y+2,pw-mr,y+2); y+=8; };
+  const chk = (n) => { if (y + n > ph - 14) { doc.addPage(); y = 16; addPageBg(); } };
 
-  // Stats
-  const bw=(pw-ml-mr-9)/4;
-  const sv=[String(plan.overview.totalPosts||0),String((plan.overview.platforms||[]).length),String(plan.overview.phases||0),plan.overview.targetAudience||'-'];
-  const sl=['Total Konten','Platform','Fase','Target Audiens'];
-  sv.forEach((v,i)=>{ const bx=ml+i*(bw+3); doc.setFillColor(40,32,12); doc.roundedRect(bx,y,bw,16,2,2,'F'); if(v.length>6){doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(180,140,60);doc.text(doc.splitTextToSize(v,bw-4),bx+bw/2,y+7,{align:'center'});}else{doc.setFontSize(12);doc.setFont('helvetica','bold');doc.setTextColor(209,161,83);doc.text(v,bx+bw/2,y+10,{align:'center'});} doc.setFontSize(6);doc.setFont('helvetica','normal');doc.setTextColor(120,100,60);doc.text(sl[i],bx+bw/2,y+14,{align:'center'}); }); y+=22;
+  function addPageBg() {
+    doc.setFillColor(...DARK); doc.rect(0, 0, pw, ph, 'F');
+  }
 
-  sec('Fase Kampanye');
-  (plan.phases||[]).forEach(p=>{ chk(10); const c=ph_rgb[p.type]||ph_rgb['1']; doc.setFillColor(...c); doc.roundedRect(ml,y,26,5,1.5,1.5,'F'); doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);doc.text(p.name||'',ml+13,y+3.5,{align:'center'}); doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(160,130,60);doc.text(p.period||'',ml+30,y+2); doc.setTextColor(220,210,180); const gl=doc.splitTextToSize(p.goal||'',pw-ml-mr-32); doc.text(gl,ml+30,y+5); y+=Math.max(9,gl.length*3.5+3); });
-  y+=3;
+  function sectionTitle(txt) {
+    chk(14);
+    doc.setFillColor(...GOLD);
+    doc.rect(ml, y, 3, 8, 'F');
+    doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.setTextColor(...GOLD);
+    doc.text(txt.toUpperCase(), ml + 7, y + 5.5);
+    doc.setDrawColor(60, 52, 20);
+    doc.line(ml + 7, y + 8.5, pw - mr, y + 8.5);
+    y += 14;
+  }
 
-  sec('Kalender Konten');
-  const cols=[22,26,44,56,37];
-  doc.setFillColor(30,24,8);doc.rect(ml,y,pw-ml-mr,7,'F');
-  doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(180,140,60);
-  let cx=ml; ['Minggu','Fase','Tema','Jadwal Harian','Platform'].forEach((h,i)=>{doc.text(h,cx+2,y+4.8);cx+=cols[i];}); y+=7;
-  (plan.calendar||[]).forEach((r,ri)=>{ const days=[r.monday,r.wednesday,r.friday,r.saturday].filter(Boolean).join(', '); const plat=(r.platforms||[]).join(', '); const tl=doc.splitTextToSize(r.theme||'',cols[2]-3); const dl=doc.splitTextToSize(days,cols[3]-3); const rh=Math.max(8,tl.length*3.5+3,dl.length*3.5+3); chk(rh+2); if(ri%2===0){doc.setFillColor(22,18,6);doc.rect(ml,y,pw-ml-mr,rh,'F');} cx=ml; const c=ph_rgb[r.phaseType]||ph_rgb['1']; doc.setFontSize(7); doc.setFont('helvetica','bold');doc.setTextColor(200,180,120);doc.text(r.week||'',cx+2,y+5);cx+=cols[0]; doc.setFillColor(...c);doc.roundedRect(cx+1,y+1.5,cols[1]-3,4.5,1.2,1.2,'F');doc.setTextColor(255,255,255);doc.text(doc.splitTextToSize(r.phase||'',cols[1]-4)[0],cx+2,y+4.8);cx+=cols[1]; doc.setTextColor(200,185,140);doc.setFont('helvetica','normal');doc.text(tl,cx+2,y+4.5);cx+=cols[2]; doc.setTextColor(140,120,80);doc.text(dl,cx+2,y+4.5);cx+=cols[3]; doc.setTextColor(180,150,80);doc.text(doc.splitTextToSize(plat,cols[4]-3),cx+2,y+4.5); y+=rh; doc.setDrawColor(40,32,10);doc.line(ml,y,pw-mr,y); });
-  y+=5;
+  // ── COVER PAGE ──
+  addPageBg();
 
-  sec('Caption Siap Pakai');
-  (plan.captions||[]).forEach(c=>{ const tl=doc.splitTextToSize(c.caption||"",pw-ml-mr-6); const ch=tl.length*3.8+12; chk(ch+4); doc.setFillColor(28,22,8);doc.roundedRect(ml,y,pw-ml-mr,ch,2,2,'F'); doc.setDrawColor(100,80,30);doc.roundedRect(ml,y,pw-ml-mr,ch,2,2,'S'); doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(209,161,83);doc.text((c.platform||"")+" · "+(c.title||""),ml+4,y+5.5); doc.setFont('helvetica','normal');doc.setTextColor(200,185,140);doc.text(tl,ml+4,y+10.5); y+=ch+4; });
+  // Top accent bar
+  doc.setFillColor(...GOLD);
+  doc.rect(0, 0, pw, 2, 'F');
 
-  sec('Tips Box Office');
-  (plan.tipsBoxOffice||[]).forEach(t=>{ chk(13); doc.setFillColor(28,22,8);doc.roundedRect(ml,y,pw-ml-mr,11,2,2,'F'); doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(209,161,83);doc.text(t.title||'',ml+4,y+4.5); doc.setFont('helvetica','normal');doc.setTextColor(160,140,90); const dl=doc.splitTextToSize(t.desc||'',pw-ml-mr-8);doc.text(dl,ml+4,y+8.5); y+=Math.max(13,dl.length*3.5+7); });
+  // Title block
+  doc.setFillColor(...DARK2);
+  doc.roundedRect(ml, 20, pw - ml - mr, 55, 4, 4, 'F');
+  doc.setDrawColor(...GOLD); doc.setLineWidth(0.3);
+  doc.roundedRect(ml, 20, pw - ml - mr, 55, 4, 4, 'S');
+  doc.setLineWidth(0.2);
 
-  const total=doc.internal.getNumberOfPages();
-  for(let pg=1;pg<=total;pg++){ doc.setPage(pg);doc.setFillColor(26,18,6);doc.rect(0,ph-9,pw,9,'F');doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(120,100,60);doc.text(meta.title+" — Box Office Campaign Plan",ml,ph-3.5);doc.text(pg+"/"+total,pw-mr,ph-3.5,{align:'right'}); }
-  doc.save('campaign-'+meta.title.replace(/[^a-zA-Z0-9]/g,'-').toLowerCase()+'.pdf');
+  // Release type badge
+  const rtBadge = (releaseType === 'ott' ? 'OTT / STREAMING' : 'BIOSKOP / THEATRICAL');
+  doc.setFillColor(...GOLD);
+  doc.roundedRect(ml + 8, 28, 42, 6, 2, 2, 'F');
+  doc.setFontSize(6.5); doc.setFont('helvetica','bold'); doc.setTextColor(...DARK);
+  doc.text(rtBadge, ml + 29, 32.2, { align: 'center' });
+
+  // Film title
+  doc.setFontSize(22); doc.setFont('helvetica','bold'); doc.setTextColor(...TEXT);
+  const titleLines = doc.splitTextToSize(meta.title || '', pw - ml - mr - 20);
+  doc.text(titleLines, ml + 8, 42);
+  y = 42 + titleLines.length * 9;
+
+  doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+  doc.text((meta.genre || '') + '  ·  Tayang ' + (meta.releaseFormatted || ''), ml + 8, y + 3);
+  if (meta.cast) { doc.text('Pemain: ' + meta.cast, ml + 8, y + 9); }
+
+  y = 90;
+
+  // Stats row
+  const stats = [
+    { n: String((plan.days||[]).length * 2), l: 'Total Konten' },
+    { n: String((plan.overview?.platforms||[]).length), l: 'Platform' },
+    { n: String(plan.overview?.phases || (plan.phases||[]).length), l: 'Fase' },
+    { n: String((plan.days||[]).length), l: 'Hari Kampanye' },
+  ];
+  const sw = (pw - ml - mr - 9) / 4;
+  stats.forEach((s, i) => {
+    const bx = ml + i * (sw + 3);
+    doc.setFillColor(...DARK3);
+    doc.roundedRect(bx, y, sw, 20, 3, 3, 'F');
+    doc.setDrawColor(60, 50, 20); doc.setLineWidth(0.3);
+    doc.roundedRect(bx, y, sw, 20, 3, 3, 'S');
+    doc.setFontSize(s.n.length > 4 ? 9 : 14);
+    doc.setFont('helvetica','bold'); doc.setTextColor(...GOLD);
+    doc.text(s.n, bx + sw / 2, y + (s.n.length > 4 ? 8 : 12), { align: 'center' });
+    doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+    doc.text(s.l, bx + sw / 2, y + 17, { align: 'center' });
+  });
+  y += 30;
+
+  // Param badges
+  const paramLabels = [
+    params.audience !== 'general' ? params.audience.toUpperCase() : null,
+    params.tone     !== 'general' ? params.tone.toUpperCase()     : null,
+    params.mood     !== 'general' ? params.mood.toUpperCase()     : null,
+    params.budget   !== 'general' ? params.budget.toUpperCase() + ' BUDGET' : null,
+  ].filter(Boolean);
+  if (paramLabels.length) {
+    let bx = ml;
+    paramLabels.forEach(label => {
+      const w = doc.getStringUnitWidth(label) * 7 / doc.internal.scaleFactor + 8;
+      doc.setFillColor(40, 32, 12);
+      doc.roundedRect(bx, y, w, 6, 2, 2, 'F');
+      doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...GOLD);
+      doc.text(label, bx + w/2, y + 4, { align: 'center' });
+      bx += w + 4;
+    });
+    y += 14;
+  }
+
+  // Generated date
+  // Notes block in PDF if present
+  if (meta.notes) {
+    chk(20);
+    doc.setFillColor(30, 25, 8);
+    doc.roundedRect(ml, y, pw - ml - mr, 16, 3, 3, 'F');
+    doc.setDrawColor(80, 60, 20); doc.roundedRect(ml, y, pw - ml - mr, 16, 3, 3, 'S');
+    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(...GOLD);
+    doc.text('📝 CATATAN TIM', ml + 5, y + 5);
+    doc.setFont('helvetica','normal'); doc.setTextColor(...TEXT);
+    const noteLines = doc.splitTextToSize(meta.notes, pw - ml - mr - 10);
+    doc.text(noteLines.slice(0, 3), ml + 5, y + 9.5);
+    y += 22;
+  }
+  doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+  doc.text('Generated: ' + new Date().toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'}), ml, y);
+  y += 16;
+
+  // ── PAGE 2+ ──
+  doc.addPage(); y = 16; addPageBg();
+
+  // PHASES
+  sectionTitle('Fase Kampanye');
+  (plan.phases||[]).forEach(p => {
+    chk(14);
+    const c = phRGB[p.type] || phRGB['1'];
+    doc.setFillColor(...c); doc.roundedRect(ml, y, 28, 6, 2, 2, 'F');
+    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(10, 10, 10);
+    doc.text(p.name || '', ml + 14, y + 4.2, { align: 'center' });
+    doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+    doc.text(p.period || '', ml + 32, y + 2.8);
+    doc.setTextColor(...TEXT);
+    const gl = doc.splitTextToSize(p.goal || '', pw - ml - mr - 34);
+    doc.text(gl, ml + 32, y + 6);
+    y += Math.max(12, gl.length * 3.8 + 5);
+  });
+  y += 4;
+
+  // DAILY CALENDAR
+  sectionTitle('Kalender Harian');
+  const calCols = [18, 22, 28, pw - ml - mr - 68];
+
+  // Table header
+  doc.setFillColor(...DARK3);
+  doc.rect(ml, y, pw - ml - mr, 8, 'F');
+  doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(...GOLD);
+  let cx = ml;
+  ['Hari','Tanggal','Fase','Konten & Treatment'].forEach((h, i) => {
+    doc.text(h, cx + 2, y + 5.2);
+    cx += calCols[i];
+  });
+  y += 8;
+
+  (plan.days || []).forEach((d, ri) => {
+    const items = d.items || [];
+    // Calculate row height
+    let rowH = 4;
+    items.forEach(it => {
+      const tr = doc.splitTextToSize((it.title||'') + ': ' + (it.treatment||''), calCols[3] - 4);
+      rowH += tr.length * 3.5 + 7;
+    });
+    rowH = Math.max(rowH, 12);
+    chk(rowH + 2);
+
+    // Alternating row bg
+    if (ri % 2 === 0) { doc.setFillColor(18, 19, 25); doc.rect(ml, y, pw - ml - mr, rowH, 'F'); }
+
+    // Day number
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(...GOLD);
+    doc.text('H' + (d.day||''), ml + 2, y + 6);
+
+    // Date label
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+    doc.text(d.date || '', ml + calCols[0] + 2, y + 6);
+
+    // Phase badge
+    const phaseKey = d.phase === 'Awareness' ? '1' : d.phase === 'Excitement' ? '2' : d.phase === 'Pre-Launch' || d.phase === 'Launch' ? d.phase === 'Pre-Launch' ? '3' : '4' : '5';
+    const pc = phRGB[phaseKey] || phRGB['1'];
+    doc.setFillColor(...pc);
+    doc.roundedRect(ml + calCols[0] + calCols[1] + 1, y + 1.5, calCols[2] - 3, 5, 1.5, 1.5, 'F');
+    doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(10,10,10);
+    const phaseShort = (d.phase||'').substring(0, 10);
+    doc.text(phaseShort, ml + calCols[0] + calCols[1] + calCols[2]/2, y + 5, { align: 'center' });
+
+    // Items
+    let itemY = y + 3;
+    const itemsX = ml + calCols[0] + calCols[1] + calCols[2] + 2;
+    items.forEach(it => {
+      const typeColors = { Video:[209,161,83], Reels:[78,200,140], Carousel:[120,160,255], Story:[255,120,80], Thread:[220,120,255] };
+      const tc = typeColors[it.type] || GOLD;
+      // Type + platform badges
+      doc.setFillColor(...tc, 0.3); // approximation
+      doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...tc);
+      doc.text('[' + (it.type||'') + '] ' + (it.platform||''), itemsX, itemY + 3.5);
+      // Title
+      doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(...TEXT);
+      doc.text(it.title || '', itemsX, itemY + 7);
+      // Treatment
+      doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+      const tr = doc.splitTextToSize(it.treatment || '', calCols[3] - 4);
+      doc.text(tr, itemsX, itemY + 10.5);
+      itemY += tr.length * 3.5 + 9;
+    });
+
+    doc.setDrawColor(30, 32, 40); doc.line(ml, y + rowH, pw - mr, y + rowH);
+    y += rowH;
+  });
+  y += 6;
+
+  // CAPTIONS
+  doc.addPage(); y = 16; addPageBg();
+  sectionTitle('Caption Siap Pakai');
+
+  const platRGB = { Instagram:[255,80,96], TikTok:[78,200,140], 'X/Twitter':[120,160,255], YouTube:[255,80,80] };
+
+  (plan.captions || []).forEach(c => {
+    const textLines = doc.splitTextToSize(c.caption || '', pw - ml - mr - 8);
+    const cardH = textLines.length * 3.8 + 18;
+    chk(cardH + 5);
+
+    // Card bg
+    doc.setFillColor(...DARK2); doc.roundedRect(ml, y, pw - ml - mr, cardH, 3, 3, 'F');
+    const pc2 = platRGB[c.platform] || GOLD;
+    doc.setFillColor(...pc2); doc.rect(ml, y, 3, cardH, 'F');
+    doc.roundedRect(ml, y, pw - ml - mr, cardH, 3, 3, 'S');
+
+    // Platform badge
+    doc.setFillColor(...pc2, 0.2);
+    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(...pc2);
+    doc.text(c.platform || '', ml + 8, y + 6);
+    doc.setTextColor(...MUTED);
+    doc.text(' · ' + (c.title||''), ml + 8 + doc.getStringUnitWidth(c.platform||'') * 7 / doc.internal.scaleFactor, y + 6);
+
+    // Caption text
+    doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...TEXT);
+    doc.text(textLines, ml + 8, y + 12);
+    y += cardH + 5;
+  });
+
+  // TIPS
+  sectionTitle('Tips Box Office');
+  (plan.tipsBoxOffice || []).forEach(t => {
+    chk(16);
+    doc.setFillColor(...DARK2); doc.roundedRect(ml, y, pw - ml - mr, 13, 2, 2, 'F');
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(...GOLD);
+    doc.text((t.icon||'') + '  ' + (t.title||''), ml + 5, y + 5);
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+    const dl = doc.splitTextToSize(t.desc||'', pw - ml - mr - 10);
+    doc.text(dl, ml + 5, y + 9.5);
+    y += Math.max(16, dl.length * 3.8 + 8);
+  });
+
+  // ── FOOTER on all pages ──
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let pg = 1; pg <= totalPages; pg++) {
+    doc.setPage(pg);
+    doc.setFillColor(...DARK2); doc.rect(0, ph - 10, pw, 10, 'F');
+    doc.setFillColor(...GOLD); doc.rect(0, ph - 10, pw, 0.5, 'F');
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+    doc.text((meta.title||'') + '  —  Box Office Campaign Plan', ml, ph - 4);
+    doc.text(pg + ' / ' + totalPages, pw - mr, ph - 4, { align: 'right' });
+  }
+
+  doc.save('campaign-' + (meta.title||'film').replace(/[^a-zA-Z0-9]/g,'-').toLowerCase() + '.pdf');
 }
+
 
 // Init event listeners
 document.addEventListener('DOMContentLoaded', () => {
@@ -1187,6 +1604,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   updateTimingUI();
+
+  // History modal close
+  const closeBtn = document.getElementById('closeHistory');
+  if (closeBtn) closeBtn.addEventListener('click', hideHistory);
+  const modal = document.getElementById('historyModal');
+  if (modal) modal.addEventListener('click', function(e) { if (e.target === this) hideHistory(); });
+
+  // Show history button in header if history exists
+  const hist = getHistory();
+  if (hist.length) {
+    const heroBtn = document.querySelector('.hero-cta');
+    if (heroBtn) {
+      const hBtn = document.createElement('button');
+      hBtn.textContent = '📚 ' + hist.length + ' Campaign Tersimpan';
+      hBtn.style.cssText = "background:none;border:1px solid rgba(209,161,83,0.4);color:#d1a153;border-radius:8px;padding:8px 16px;font-size:0.82rem;cursor:pointer;margin-top:12px;display:block;margin-left:auto;margin-right:auto";
+      hBtn.addEventListener('click', showHistory);
+      heroBtn.parentElement.appendChild(hBtn);
+    }
+  }
 
   document.querySelectorAll('.param').forEach(btn => {
     btn.addEventListener('click', function() { setParam(this); });
