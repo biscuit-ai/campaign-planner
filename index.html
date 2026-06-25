@@ -103,6 +103,11 @@ tr:hover td { background: rgba(255,255,255,.02); }
 .btn-sec:hover { background: var(--surface2); }
 .dur-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .dur-grid .btn-sec { padding: 9px 6px; font-size: 0.82rem; text-align: center; }
+.type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.type-grid .btn-sec { padding: 12px 14px; text-align: left; display: flex; flex-direction: column; gap: 3px; }
+.type-hint { font-size: 0.72rem; color: var(--muted); font-weight: 400; }
+.rtype.active .type-hint { color: rgba(209,161,83,0.7); }
+.dur-grid .btn-sec { padding: 9px 6px; font-size: 0.82rem; text-align: center; }
 .cal-wrap { overflow-x: auto; }
 .err { color: var(--red); font-size: 0.875rem; margin-top: 8px; display: none; }
 .progress-wrap { width: 100%; max-width: 320px; height: 6px; background: var(--border); border-radius: 10px; margin: 16px auto 8px; overflow: hidden; }
@@ -148,6 +153,20 @@ tr:hover td { background: rgba(255,255,255,.02); }
       </div>
     </div>
     <div class="form-group">
+      <label>Tipe Rilis</label>
+      <div class="type-grid">
+        <button class="btn-sec rtype active" data-val="bioskop" type="button">
+          🎬 Bioskop
+          <span class="type-hint">Premiere · Build hype panjang</span>
+        </button>
+        <button class="btn-sec rtype" data-val="ott" type="button">
+          📺 OTT / Streaming
+          <span class="type-hint">Re-engagement · Kampanye singkat</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="form-group">
       <label for="movieCast">Pemain Utama <span class="opt">(opsional)</span></label>
       <input type="text" id="movieCast" placeholder="Contoh: Abun Sungkar, Callista Arum" />
     </div>
@@ -186,6 +205,7 @@ const WORKER_URL = 'https://campaign-plannergr.emilkwikku001.workers.dev';
 
 let dur = 1; // weeks
 let durDays = 7;
+let releaseType = 'bioskop'; // 'bioskop' | 'ott'
 let plan = null;
 let meta = {};
 
@@ -202,6 +222,45 @@ function copyText(btn, text) {
     btn.classList.add('ok'); btn.textContent = '✓ Copied';
     setTimeout(() => { btn.classList.remove('ok'); btn.textContent = 'Copy'; }, 1600);
   });
+}
+
+function setReleaseType(btn) {
+  document.querySelectorAll('.rtype').forEach(b => {
+    b.classList.remove('active');
+    b.style.borderColor = '';
+    b.style.color = '';
+  });
+  btn.classList.add('active');
+  btn.style.borderColor = 'var(--gold)';
+  btn.style.color = 'var(--gold)';
+  releaseType = btn.dataset.val;
+
+  // Auto-limit duration for OTT
+  if (releaseType === 'ott') {
+    const maxOTT = 14; // max 2 weeks for OTT
+    if (durDays > maxOTT) {
+      // Reset to 2 weeks
+      const twoWeekBtn = document.querySelector('.dur[data-val="2"]');
+      if (twoWeekBtn) setDur(twoWeekBtn);
+    }
+    // Show hint
+    showOTTHint(true);
+  } else {
+    showOTTHint(false);
+  }
+}
+
+function showOTTHint(show) {
+  let hint = document.getElementById('ottHint');
+  if (!hint) {
+    hint = document.createElement('p');
+    hint.id = 'ottHint';
+    hint.style.cssText = 'font-size:0.78rem;color:var(--gold);margin-top:6px;display:none';
+    hint.textContent = '💡 OTT: Durasi kampanye direkomendasikan 1–2 minggu';
+    const durGroup = document.querySelector('.dur-grid');
+    if (durGroup) durGroup.parentElement.appendChild(hint);
+  }
+  hint.style.display = show ? 'block' : 'none';
 }
 
 function setDur(btn) {
@@ -311,6 +370,10 @@ async function generate() {
   document.getElementById('loadingSection').style.display = 'block';
 
   const film = title + ' | ' + genre + ' | ' + relFmt + (cast ? ' | ' + cast : '');
+  const isOTT = releaseType === 'ott';
+  const releaseCtx = isOTT
+    ? 'TIPE RILIS: OTT/Streaming (film sudah pernah tayang di bioskop, sekarang hadir di platform streaming). Strategi: re-engagement penonton lama + akuisisi penonton baru yang belum sempat nonton. Tone: "Sekarang bisa nonton di rumah". Fokus: convenience, aksesibilitas, binge-watch.'
+    : 'TIPE RILIS: Bioskop (premiere/tayang perdana). Strategi: build hype maksimal, dorong beli tiket, ciptakan FOMO opening weekend. Tone: "Harus nonton di bioskop". Fokus: pengalaman sinema, opening weekend, prestige.';
   const syn  = synopsis.length > 150 ? synopsis.substring(0, 150) + '...' : synopsis;
   const days = durDays;
 
@@ -332,6 +395,7 @@ async function generate() {
     // CALL 1: Overview + phases — very short JSON
     const rPhase = await callAPI(
       'Film Indonesia: ' + film + '. Sinopsis: ' + syn + '. Kampanye ' + dur + ' minggu.\n'
+      + releaseCtx + '\n'
       + 'Jawab HANYA JSON ini (isi placeholder):\n'
       + '{"overview":{"totalPosts":' + (days*2) + ',"platforms":["Instagram","TikTok","X/Twitter","YouTube"],"phases":4,"targetAudience":"[5 kata target penonton]"},'
       + '"phases":[{"name":"Awareness","period":"H1-H' + aw + '","goal":"[tujuan 6 kata]","type":"1"},'
@@ -357,7 +421,7 @@ async function generate() {
 
       // Build a compact example row
       const exPhase = getPhase(d1);
-      const prompt = 'Content planner film: ' + film + '.\n'
+      const prompt = 'Content planner film: ' + film + '. ' + (isOTT ? 'OTT streaming — tone santai, dorong nonton di rumah sekarang.' : 'Bioskop — tone hype/FOMO, dorong beli tiket.') + '\n'
         + 'Buat jadwal H' + d1 + ' sampai H' + d2 + '. Tiap hari 2 item beda platform.\n'
         + 'Format SINGKAT — jawab HANYA JSON array:\n'
         + '[{"d":' + d1 + ',"p":"' + exPhase + '","a":{"pl":"TikTok","t":"Video","ti":"[judul 4 kata]","tr":"[brief 6 kata]"},"b":{"pl":"Instagram","t":"Carousel","ti":"[judul 4 kata]","tr":"[brief 6 kata]"}}]\n'
@@ -399,6 +463,7 @@ async function generate() {
     setProgress(80, 'Menulis caption...');
     const rCap = await callAPI(
       'Copywriter film. Film: ' + film + '. Sinopsis: ' + syn + '.\n'
+      + (isOTT ? 'Tipe rilis OTT — caption harus menonjolkan kemudahan nonton dari rumah, bukan ajakan ke bioskop.\n' : 'Tipe rilis Bioskop — caption harus ciptakan FOMO dan dorong nonton di bioskop.\n')
       + 'Tulis 4 caption Bahasa Indonesia. Format:\n'
       + '===1===\nPLATFORM: Instagram\nJUDUL: [judul]\nFASE: Awareness\n[caption+hashtag]\n===END===\n'
       + '===2===\nPLATFORM: TikTok\nJUDUL: [judul]\nFASE: Excitement\n[caption+hashtag]\n===END===\n'
@@ -503,7 +568,7 @@ function renderResults() {
     + '<div class="card">'
     + '<div class="out-header">'
     + '<div><div class="out-title">' + meta.title + '</div>'
-    + '<div class="out-meta">' + meta.genre + ' · Tayang ' + meta.releaseFormatted + (meta.cast?' · '+meta.cast:'') + '</div></div>'
+    + '<div class="out-meta">' + (releaseType === 'ott' ? '📺 OTT · ' : '🎬 Bioskop · ') + meta.genre + ' · Tayang ' + meta.releaseFormatted + (meta.cast?' · '+meta.cast:'') + '</div></div>'
     + '<span class="ready">✓ Campaign Ready</span>'
     + '</div>'
     + '<div class="stats-row">'
@@ -675,6 +740,13 @@ function exportPDF() {
 // Init event listeners
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('genBtn').addEventListener('click', generate);
+  document.querySelectorAll('.rtype').forEach(btn => {
+    btn.addEventListener('click', function() { setReleaseType(this); });
+  });
+  // Set initial rtype active style
+  const firstRtype = document.querySelector('.rtype.active');
+  if (firstRtype) { firstRtype.style.borderColor='var(--gold)'; firstRtype.style.color='var(--gold)'; }
+
   document.querySelectorAll('.dur').forEach(btn => {
     btn.addEventListener('click', function() { setDur(this); });
   });
