@@ -797,11 +797,7 @@ function copyText(btn, text) {
 }
 
 function setReleaseType(btn) {
-  document.querySelectorAll('.rtype').forEach(b => {
-    b.classList.remove('active');
-    b.style.borderColor = '';
-    b.style.color = '';
-  });
+  document.querySelectorAll('.rtype-btn').forEach(b => { b.classList.remove('active'); });
   btn.classList.add('active');
   releaseType = btn.dataset.val;
 
@@ -810,7 +806,7 @@ function setReleaseType(btn) {
     const maxOTT = 14; // max 2 weeks for OTT
     if (durDays > maxOTT) {
       // Reset to 2 weeks
-      const twoWeekBtn = document.querySelector('.dur[data-val="2"]');
+      const twoWeekBtn = document.querySelector('.dur-btn[data-val="2"]');
       if (twoWeekBtn) setDur(twoWeekBtn);
     }
     // Show hint
@@ -837,7 +833,7 @@ function setTiming(val) {
 }
 
 function updateTimingUI() {
-  const bothBtn = document.getElementById('timingBoth');
+  const bothBtn = document.getElementById('timingBoth') || document.querySelector('.timing-btn[data-val="both"]');
   const hint    = document.getElementById('timingHint');
 
   // "Both" only available if dur >= 2 weeks
@@ -870,8 +866,6 @@ function updateTimingUI() {
   const activeBtn = document.querySelector('.timing-btn[data-val="' + timing + '"]');
   if (activeBtn && !activeBtn.classList.contains('disabled')) {
     activeBtn.classList.add('active');
-    activeBtn.style.borderColor = 'var(--gold)';
-    activeBtn.style.color = 'var(--gold)';
   }
 
   // Update timing hint text
@@ -901,14 +895,8 @@ function showOTTHint(show) {
 }
 
 function setDur(btn) {
-  document.querySelectorAll('.dur').forEach(b => {
-    b.classList.remove('active');
-    b.style.borderColor = '';
-    b.style.color = '';
-  });
+  document.querySelectorAll('.dur-btn').forEach(b => { b.classList.remove('active'); });
   btn.classList.add('active');
-  btn.style.borderColor = 'var(--gold)';
-  btn.style.color = 'var(--gold)';
   dur = parseInt(btn.dataset.val);
   durDays = parseInt(btn.dataset.days);
   updateTimingUI();
@@ -1920,7 +1908,7 @@ function exportPDF() {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('genBtn').addEventListener('click', generate);
   // Timing buttons
-  document.querySelectorAll('.timing').forEach(btn => {
+  document.querySelectorAll('.timing-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       if (this.classList.contains('disabled')) return;
       setTiming(this.dataset.val);
@@ -1982,7 +1970,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Set initial rtype active style
   // rtype active styles by CSS
 
-  document.querySelectorAll('.dur').forEach(btn => {
+  document.querySelectorAll('.dur-btn').forEach(btn => {
     btn.addEventListener('click', function() { setDur(this); });
   });
   // Set initial active style
