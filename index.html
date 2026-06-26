@@ -1542,7 +1542,6 @@ function showHistory() {
   const modal   = document.getElementById('historyModal');
   const list    = document.getElementById('historyList');
 
-  {
     const phColors = {'1':'rgba(209,161,83,.18)','2':'rgba(78,239,178,.12)','3':'rgba(255,120,80,.12)','4':'rgba(120,160,255,.12)','5':'rgba(220,120,255,.12)'};
     const phText   = {'1':'#d1a153','2':'#4eefb2','3':'#ff7850','4':'#78a0ff','5':'#dc78ff'};
     list.innerHTML = history.length ? history.map(h => {
@@ -1583,8 +1582,8 @@ function showHistory() {
     }).join('') : '<div class="hist-empty"><div class="e-icon">📭</div><div class="e-title">Belum ada kampanye tersimpan</div><p>Klik 💾 Simpan setelah generate</p></div>';
   modal.style.display = 'block';
   document.body.style.overflow = 'hidden';
-}
 
+}
 function hideHistory() {
   document.getElementById('historyModal').style.display = 'none';
   document.body.style.overflow = '';
@@ -1924,7 +1923,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Theme toggle
   const themeToggle = document.getElementById('themeToggle');
-  const savedTheme = localStorage.getItem('cp_theme') || 'dark';
+  const savedTheme = localStorage.getItem('cp_theme') || 'light';
   document.documentElement.className = savedTheme;
   themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
   themeToggle.addEventListener('click', () => {
@@ -1975,9 +1974,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   // Set initial active style
   // active styles handled by CSS
-});
-
-
-}</script>
+});</script>
 </body>
 </html>
