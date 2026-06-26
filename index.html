@@ -1041,9 +1041,21 @@ async function generate() {
     cast:       'USP: Star Power Cast — leverage fanbase aktor, konten in-character, chemistry cast, behind-scenes momen personal'
   }[params.usp] || 'Konten film berkualitas';
 
+  // Detect if film year suggests classic/catalog title
+  const filmYear = parseInt((meta.releaseFormatted || '').match(/\d{4}/)?.[0] || new Date().getFullYear());
+  const isClassicFilm = filmYear < new Date().getFullYear() - 1;
+
   const releaseCtx = isOTT
-    ? 'TIPE: OTT/Streaming — film sudah pernah tayang di bioskop, kini hadir di platform streaming. Strategi: re-engagement penonton lama + akuisisi baru. Tone: convenience, nonton dari rumah, binge-watch. JANGAN mention beli tiket bioskop.'
-    : 'TIPE: Bioskop/Theatrical Premiere — tayang perdana. Strategi: build hype maksimal, FOMO opening weekend, dorong beli tiket. Tone: "pengalaman sinema yang tidak bisa dilewatkan".';
+    ? isClassicFilm
+      ? 'TIPE: OTT/Streaming — INI FILM LAMA/KLASIK yang kini hadir di platform streaming (bukan film baru). ' +
+        'PENTING: Jangan buat konten seolah film ini baru rilis atau belum pernah ditonton orang. ' +
+        'Strategi: nostalgia & rediscovery — ajak penonton yang sudah nonton untuk nonton ulang, dan perkenalkan ke generasi baru yang belum pernah nonton. ' +
+        'Angle konten: "Film jadul yang ternyata masih relevan", "Kenangan masa kecil/remaja", "Klasik yang wajib ditonton", easter eggs & behind the scenes lama. ' +
+        'Tone: hangat, nostalgik, discovery. JANGAN mention beli tiket bioskop.'
+      : 'TIPE: OTT/Streaming — film baru yang tayang perdana di platform streaming (bukan bioskop). ' +
+        'Strategi: re-engagement audiens + akuisisi penonton baru. ' +
+        'Tone: convenience & excitement — "tayang sekarang dari rumah", binge-watch. JANGAN mention beli tiket bioskop.'
+    : 'TIPE: Bioskop/Theatrical Premiere — tayang perdana di bioskop. Strategi: build hype maksimal, FOMO opening weekend, dorong beli tiket. Tone: "pengalaman sinema yang tidak bisa dilewatkan".';
 
   // Master context untuk semua prompt
   const notesCtx = notes
@@ -1162,8 +1174,12 @@ async function generate() {
         + 'Buat jadwal H' + d1 + ' sampai H' + d2 + '. Tiap hari 2 item beda platform.\n'
         + 'Treatment wajib actionable & spesifik: jelaskan APA yang dibuat, BAGAIMANA eksekusinya, dan TUJUANNYA. Contoh treatment bagus: "Video 10 detik cast utama duduk diam di lokasi ikonik film, caption hanya ??? — bikin penonton tebak lokasi". Bukan hanya "video tentang film". Tone: ' + toneCtx.substring(0,50) + '.\n'
         + 'Format SINGKAT — jawab HANYA JSON array:\n'
-        + '[{"d":' + d1 + ',"p":"' + exPhase + '","a":{"pl":"TikTok","t":"Video","ti":"[judul 4 kata]","tr":"[brief 6 kata]"},"b":{"pl":"Instagram","t":"Carousel","ti":"[judul 4 kata]","tr":"[brief 6 kata]"}}]\n'
-        + 'Lanjutkan sampai d=' + d2 + '. Variasikan platform (Instagram/TikTok/X/YouTube) dan type (Video/Carousel/Story/Reels/Thread). Sesuaikan fase: ' + getPhase(d1) + ' ke ' + getPhase(d2) + '. JSON only.';
+        + '[{"d":' + d1 + ',"p":"' + exPhase + '","a":{"pl":"TikTok","t":"Video","ti":"[judul 4 kata]","tr":"[brief 8 kata actionable]","cap":"[caption siap posting bahasa Indonesia dengan emoji dan hashtag]"},"b":{"pl":"Instagram","t":"Carousel","ti":"[judul 4 kata]","tr":"[brief 8 kata actionable]","cap":"[caption siap posting bahasa Indonesia dengan emoji dan hashtag]"}}]\n'
+        + 'Lanjutkan sampai d=' + d2 + '. '
+        + 'WAJIB: setiap item harus punya field "cap" berisi caption siap posting Bahasa Indonesia sesuai platform, lengkap dengan emoji dan hashtag relevan. '
+        + 'Variasikan platform (Instagram/TikTok/X/YouTube) dan type (Video/Carousel/Story/Reels/Thread). '
+        + 'Tone caption: ' + toneCtx.substring(0, 60) + '. '
+        + 'Sesuaikan fase: ' + getPhase(d1) + ' ke ' + getPhase(d2) + '. JSON only.';
 
       const rCal = await callAPI(prompt, 'Jadwal H' + d1 + '–H' + d2 + '...');
       try {
@@ -1177,8 +1193,8 @@ async function generate() {
             date: getDateLabel(item.d),
             phase: item.p || getPhase(item.d),
             items: [
-              { platform: item.a.pl, type: item.a.t, title: item.a.ti, treatment: item.a.tr },
-              { platform: item.b.pl, type: item.b.t, title: item.b.ti, treatment: item.b.tr }
+              { platform: item.a.pl, type: item.a.t, title: item.a.ti, treatment: item.a.tr, caption: item.a.cap || '' },
+              { platform: item.b.pl, type: item.b.t, title: item.b.ti, treatment: item.b.tr, caption: item.b.cap || '' }
             ]
           });
         });
@@ -1223,8 +1239,8 @@ async function generate() {
             date: getDateLabel(dd),
             phase,
             items: [
-              { platform: tmpl[0].platform, type: tmpl[0].type, title: tmpl[0].title + ' (H' + dd + ')', treatment: tmpl[0].treatment },
-              { platform: tmpl[1].platform, type: tmpl[1].type, title: tmpl[1].title + ' (H' + dd + ')', treatment: tmpl[1].treatment }
+              { platform: tmpl[0].platform, type: tmpl[0].type, title: tmpl[0].title + ' (H' + dd + ')', treatment: tmpl[0].treatment, caption: '' },
+              { platform: tmpl[1].platform, type: tmpl[1].type, title: tmpl[1].title + ' (H' + dd + ')', treatment: tmpl[1].treatment, caption: '' }
             ]
           });
         }
@@ -1303,16 +1319,23 @@ function renderResults() {
     const items = (d.items||[]).map(it => {
       const icon = typeIcon[it.type] || '📌';
       const tcol = typeColorMap[it.type] || '';
-      const pcol = platColor[it.platform] || 'background:rgba(255,255,255,.08);color:#aaa';
-      return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:0.5px solid rgba(255,255,255,0.05)">'
-        + '<span style="font-size:1rem;flex-shrink:0">' + icon + '</span>'
+      const pcol = platColor[it.platform] || 'background:rgba(45,75,62,.08);color:#2D4B3E';
+      const capBlock = it.caption
+        ? '<div style="margin-top:7px;padding:8px 10px;background:rgba(45,75,62,0.06);border-left:2px solid #2D4B3E;border-radius:0 6px 6px 0;font-size:0.75rem;line-height:1.6;color:var(--text);white-space:pre-wrap">'
+          + '<span style="font-size:0.62rem;font-weight:700;color:#2D4B3E;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">✍️ Caption</span>'
+          + (it.caption||'').replace(/</g,'&lt;')
+          + '</div>'
+        : '';
+      return '<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">'
+        + '<span style="font-size:1rem;flex-shrink:0;margin-top:2px">' + icon + '</span>'
         + '<div style="flex:1;min-width:0">'
-        + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap">'
-        + '<span style="font-size:0.7rem;font-weight:700;padding:1px 7px;border-radius:20px;' + tcol + '">' + (it.type||'') + '</span>'
-        + '<span style="font-size:0.7rem;padding:1px 7px;border-radius:20px;' + pcol + '">' + (it.platform||'') + '</span>'
+        + '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;flex-wrap:wrap">'
+        + '<span style="font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:99px;' + tcol + '">' + (it.type||'') + '</span>'
+        + '<span style="font-size:0.68rem;padding:2px 8px;border-radius:99px;' + pcol + '">' + (it.platform||'') + '</span>'
         + '</div>'
-        + '<div style="font-size:0.82rem;font-weight:600;margin-bottom:2px">' + (it.title||'') + '</div>'
-        + '<div style="font-size:0.78rem;color:var(--muted);line-height:1.4">' + (it.treatment||'') + '</div>'
+        + '<div style="font-size:0.83rem;font-weight:700;margin-bottom:3px;color:var(--text)">' + (it.title||'') + '</div>'
+        + '<div style="font-size:0.78rem;color:var(--muted);line-height:1.5">' + (it.treatment||'') + '</div>'
+        + capBlock
         + '</div></div>';
     }).join('');
     const phType = d.phase==='Awareness'?'1':d.phase==='Excitement'?'2':d.phase==='Engagement'?'3':d.phase==='Pre-Launch'?'4':'5';
@@ -1634,274 +1657,301 @@ function exportPDF() {
   const pw = 210, ph = 297, ml = 16, mr = 16;
   let y = 0;
 
-  const GOLD   = [209, 161, 83];
-  const DARK   = [11, 12, 16];
-  const DARK2  = [19, 20, 26];
-  const DARK3  = [26, 27, 35];
-  const TEXT   = [240, 240, 244];
-  const MUTED  = [136, 136, 153];
-  const GREEN  = [78, 200, 140];
-  const phRGB  = { '1':[209,161,83],'2':[78,200,140],'3':[255,120,80],'4':[120,160,255],'5':[220,120,255] };
+  // ── NORDIC LIGHT PALETTE ──
+  const FOREST  = [45, 75, 62];       // #2D4B3E
+  const CLAY    = [176, 125, 98];     // #B07D62
+  const WHITE   = [255, 255, 255];
+  const OFFWHT  = [247, 247, 245];    // #F7F7F5
+  const SURFACE = [240, 240, 238];    // #F0F0EE
+  const TEXT    = [44, 44, 43];       // #2C2C2B
+  const MUTED   = [107, 107, 103];    // #6B6B67
+  const OUTLINE = [209, 209, 205];    // #D1D1CD
 
-  const chk = (n) => { if (y + n > ph - 14) { doc.addPage(); y = 16; addPageBg(); } };
+  const phRGB = {
+    '1': [45,75,62],   '2': [176,125,98],
+    '3': [107,142,35], '4': [45,75,62],   '5': [176,125,98]
+  };
+  const phBG = {
+    '1': [227,233,229], '2': [245,239,235],
+    '3': [234,242,218], '4': [227,233,229], '5': [245,239,235]
+  };
+  const platRGB = {
+    Instagram: [225,60,80],
+    TikTok:    [30,170,120],
+    'X/Twitter':[60,100,190],
+    YouTube:   [220,50,50]
+  };
+  const platBG = {
+    Instagram: [253,235,237],
+    TikTok:    [230,248,242],
+    'X/Twitter':[233,240,252],
+    YouTube:   [253,232,232]
+  };
 
-  function addPageBg() {
-    doc.setFillColor(...DARK); doc.rect(0, 0, pw, ph, 'F');
-  }
+  const chk = (n) => {
+    if (y + n > ph - 16) {
+      doc.addPage();
+      y = 16;
+      // Page bg
+      doc.setFillColor(...OFFWHT); doc.rect(0,0,pw,ph,'F');
+    }
+  };
 
-  function sectionTitle(txt) {
-    chk(14);
-    doc.setFillColor(...GOLD);
-    doc.rect(ml, y, 3, 8, 'F');
-    doc.setFontSize(9); doc.setFont('helvetica','bold');
-    doc.setTextColor(...GOLD);
-    doc.text(txt.toUpperCase(), ml + 7, y + 5.5);
-    doc.setDrawColor(60, 52, 20);
-    doc.line(ml + 7, y + 8.5, pw - mr, y + 8.5);
-    y += 14;
+  function phaseClass(p) {
+    return p==='Awareness'?'1':p==='Excitement'?'2':p==='Engagement'?'3':p==='Pre-Launch'?'4':'5';
   }
 
   // ── COVER PAGE ──
-  addPageBg();
+  doc.setFillColor(...OFFWHT); doc.rect(0,0,pw,ph,'F');
 
-  // Top accent bar
-  doc.setFillColor(...GOLD);
-  doc.rect(0, 0, pw, 2, 'F');
+  // Top bar
+  doc.setFillColor(...FOREST); doc.rect(0,0,pw,3,'F');
 
-  // Title block
-  doc.setFillColor(...DARK2);
-  doc.roundedRect(ml, 20, pw - ml - mr, 55, 4, 4, 'F');
-  doc.setDrawColor(...GOLD); doc.setLineWidth(0.3);
-  doc.roundedRect(ml, 20, pw - ml - mr, 55, 4, 4, 'S');
+  // Cover card
+  doc.setFillColor(...WHITE);
+  doc.roundedRect(ml, 16, pw-ml-mr, 72, 4, 4, 'F');
+  doc.setDrawColor(...OUTLINE); doc.setLineWidth(0.3);
+  doc.roundedRect(ml, 16, pw-ml-mr, 72, 4, 4, 'S');
   doc.setLineWidth(0.2);
 
   // Release type badge
-  const rtBadge = (releaseType === 'ott' ? 'OTT / STREAMING' : 'BIOSKOP / THEATRICAL');
-  doc.setFillColor(...GOLD);
-  doc.roundedRect(ml + 8, 28, 42, 6, 2, 2, 'F');
-  doc.setFontSize(6.5); doc.setFont('helvetica','bold'); doc.setTextColor(...DARK);
-  doc.text(rtBadge, ml + 29, 32.2, { align: 'center' });
+  const rtLabel = releaseType === 'ott' ? 'OTT / STREAMING' : 'BIOSKOP / THEATRICAL';
+  doc.setFillColor(...FOREST);
+  doc.roundedRect(ml+8, 23, 44, 6, 2, 2, 'F');
+  doc.setFontSize(6.5); doc.setFont('helvetica','bold'); doc.setTextColor(...WHITE);
+  doc.text(rtLabel, ml+30, 27.2, { align:'center' });
 
-  // Film title
-  doc.setFontSize(22); doc.setFont('helvetica','bold'); doc.setTextColor(...TEXT);
-  const titleLines = doc.splitTextToSize(meta.title || '', pw - ml - mr - 20);
-  doc.text(titleLines, ml + 8, 42);
-  y = 42 + titleLines.length * 9;
+  // Title
+  doc.setFontSize(20); doc.setFont('helvetica','bold'); doc.setTextColor(...TEXT);
+  const titleLines = doc.splitTextToSize(meta.title||'', pw-ml-mr-20);
+  doc.text(titleLines, ml+8, 38);
+  let ty = 38 + titleLines.length * 8;
 
-  doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-  doc.text((meta.genre || '') + '  ·  Tayang ' + (meta.releaseFormatted || ''), ml + 8, y + 3);
-  if (meta.cast) { doc.text('Pemain: ' + meta.cast, ml + 8, y + 9); }
+  // Subtitle
+  doc.setFontSize(9.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+  doc.text((meta.genre||'') + '  ·  Tayang ' + (meta.releaseFormatted||''), ml+8, ty+2);
+  if (meta.cast) { doc.text('Pemain: ' + meta.cast, ml+8, ty+8); }
 
-  y = 90;
+  y = 104;
 
   // Stats row
   const stats = [
-    { n: String((plan.days||[]).length * 2), l: 'Total Konten' },
-    { n: String((plan.overview?.platforms||[]).length), l: 'Platform' },
-    { n: String(plan.overview?.phases || (plan.phases||[]).length), l: 'Fase' },
-    { n: String((plan.days||[]).length), l: 'Hari Kampanye' },
+    { n: String((plan.days||[]).length*2), l:'Total Konten' },
+    { n: String((plan.overview?.platforms||[]).length), l:'Platform' },
+    { n: String((plan.phases||[]).length), l:'Fase' },
+    { n: String((plan.days||[]).length), l:'Hari' },
   ];
-  const sw = (pw - ml - mr - 9) / 4;
-  stats.forEach((s, i) => {
-    const bx = ml + i * (sw + 3);
-    doc.setFillColor(...DARK3);
-    doc.roundedRect(bx, y, sw, 20, 3, 3, 'F');
-    doc.setDrawColor(60, 50, 20); doc.setLineWidth(0.3);
-    doc.roundedRect(bx, y, sw, 20, 3, 3, 'S');
-    doc.setFontSize(s.n.length > 4 ? 9 : 14);
-    doc.setFont('helvetica','bold'); doc.setTextColor(...GOLD);
-    doc.text(s.n, bx + sw / 2, y + (s.n.length > 4 ? 8 : 12), { align: 'center' });
+  const sw = (pw-ml-mr-9)/4;
+  stats.forEach((s,i) => {
+    const bx = ml + i*(sw+3);
+    doc.setFillColor(...WHITE); doc.roundedRect(bx,y,sw,20,3,3,'F');
+    doc.setDrawColor(...OUTLINE); doc.roundedRect(bx,y,sw,20,3,3,'S');
+    doc.setFontSize(s.n.length>4?8:14);
+    doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
+    doc.text(s.n, bx+sw/2, y+(s.n.length>4?9:12), {align:'center'});
     doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-    doc.text(s.l, bx + sw / 2, y + 17, { align: 'center' });
+    doc.text(s.l, bx+sw/2, y+17, {align:'center'});
   });
   y += 30;
 
-  // Param badges
-  const paramLabels = [
-    params.audience !== 'general' ? params.audience.toUpperCase() : null,
-    params.tone     !== 'general' ? params.tone.toUpperCase()     : null,
-    params.mood     !== 'general' ? params.mood.toUpperCase()     : null,
-    params.budget   !== 'general' ? params.budget.toUpperCase() + ' BUDGET' : null,
-  ].filter(Boolean);
-  if (paramLabels.length) {
+  // Param tags
+  const ptags = [
+    params.audience !== 'general' ? params.audience : null,
+    params.tone     !== 'general' ? params.tone     : null,
+    params.mood     !== 'general' ? params.mood     : null,
+    params.budget   !== 'general' ? params.budget+' budget' : null,
+  ].filter(Boolean).map(t => t.toUpperCase());
+  if (ptags.length) {
     let bx = ml;
-    paramLabels.forEach(label => {
-      const w = doc.getStringUnitWidth(label) * 7 / doc.internal.scaleFactor + 8;
-      doc.setFillColor(40, 32, 12);
-      doc.roundedRect(bx, y, w, 6, 2, 2, 'F');
-      doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...GOLD);
-      doc.text(label, bx + w/2, y + 4, { align: 'center' });
-      bx += w + 4;
+    ptags.forEach(tag => {
+      const w = doc.getStringUnitWidth(tag)*6.5/doc.internal.scaleFactor + 8;
+      doc.setFillColor(...SURFACE); doc.roundedRect(bx,y,w,6,2,2,'F');
+      doc.setDrawColor(...OUTLINE); doc.roundedRect(bx,y,w,6,2,2,'S');
+      doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
+      doc.text(tag, bx+w/2, y+4.2, {align:'center'});
+      bx += w+4;
     });
     y += 14;
   }
 
-  // Generated date
-  // Notes block in PDF if present
+  // Notes block
   if (meta.notes) {
-    chk(20);
-    doc.setFillColor(30, 25, 8);
-    doc.roundedRect(ml, y, pw - ml - mr, 16, 3, 3, 'F');
-    doc.setDrawColor(80, 60, 20); doc.roundedRect(ml, y, pw - ml - mr, 16, 3, 3, 'S');
-    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(...GOLD);
-    doc.text('📝 CATATAN TIM', ml + 5, y + 5);
+    doc.setFillColor(...WHITE); doc.roundedRect(ml,y,pw-ml-mr,14,3,3,'F');
+    doc.setDrawColor(...CLAY); doc.roundedRect(ml,y,pw-ml-mr,14,3,3,'S');
+    doc.setFontSize(6.5); doc.setFont('helvetica','bold'); doc.setTextColor(...CLAY);
+    doc.text('📝 CATATAN TIM', ml+5, y+5);
     doc.setFont('helvetica','normal'); doc.setTextColor(...TEXT);
-    const noteLines = doc.splitTextToSize(meta.notes, pw - ml - mr - 10);
-    doc.text(noteLines.slice(0, 3), ml + 5, y + 9.5);
-    y += 22;
+    const nl = doc.splitTextToSize(meta.notes, pw-ml-mr-10);
+    doc.text(nl.slice(0,2), ml+5, y+9.5);
+    y += 20;
   }
+
+  // Generated
   doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-  doc.text('Generated: ' + new Date().toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'}), ml, y);
+  doc.text('Generated: '+new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}), ml, y);
   y += 16;
 
-  // ── PAGE 2+ ──
-  doc.addPage(); y = 16; addPageBg();
+  // ── PAGE 2: PHASES + CALENDAR ──
+  doc.addPage();
+  doc.setFillColor(...OFFWHT); doc.rect(0,0,pw,ph,'F');
+  y = 16;
+
+  function sectionTitle(txt) {
+    chk(14);
+    doc.setFillColor(...FOREST); doc.rect(ml,y,3,8,'F');
+    doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
+    doc.text(txt.toUpperCase(), ml+7, y+5.8);
+    doc.setDrawColor(...OUTLINE); doc.line(ml+7,y+8.5,pw-mr,y+8.5);
+    y += 15;
+  }
 
   // PHASES
   sectionTitle('Fase Kampanye');
   (plan.phases||[]).forEach(p => {
     chk(14);
-    const c = phRGB[p.type] || phRGB['1'];
-    doc.setFillColor(...c); doc.roundedRect(ml, y, 28, 6, 2, 2, 'F');
-    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(10, 10, 10);
-    doc.text(p.name || '', ml + 14, y + 4.2, { align: 'center' });
+    const k = p.type||'1';
+    const col = phRGB[k]||FOREST; const bg = phBG[k]||SURFACE;
+    doc.setFillColor(...bg); doc.roundedRect(ml,y,pw-ml-mr,11,2,2,'F');
+    doc.setFillColor(...col); doc.roundedRect(ml,y,30,11,2,2,'F');
+    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(...WHITE);
+    doc.text(p.name||'', ml+15, y+6.8, {align:'center'});
     doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-    doc.text(p.period || '', ml + 32, y + 2.8);
+    doc.text(p.period||'', ml+34, y+4);
     doc.setTextColor(...TEXT);
-    const gl = doc.splitTextToSize(p.goal || '', pw - ml - mr - 34);
-    doc.text(gl, ml + 32, y + 6);
-    y += Math.max(12, gl.length * 3.8 + 5);
+    const gl = doc.splitTextToSize(p.goal||'', pw-ml-mr-36);
+    doc.text(gl, ml+34, y+7.5);
+    y += Math.max(14, gl.length*3.8+6);
   });
   y += 4;
 
-  // DAILY CALENDAR
+  // CALENDAR
   sectionTitle('Kalender Harian');
-  const calCols = [18, 22, 28, pw - ml - mr - 68];
 
   // Table header
-  doc.setFillColor(...DARK3);
-  doc.rect(ml, y, pw - ml - mr, 8, 'F');
-  doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(...GOLD);
+  doc.setFillColor(...FOREST); doc.rect(ml,y,pw-ml-mr,8,'F');
+  doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(...WHITE);
+  const colW = [16,20,26,pw-ml-mr-62];
   let cx = ml;
-  ['Hari','Tanggal','Fase','Konten & Treatment'].forEach((h, i) => {
-    doc.text(h, cx + 2, y + 5.2);
-    cx += calCols[i];
+  ['Hari','Tgl','Fase','Konten · Treatment · Caption'].forEach((h,i) => {
+    doc.text(h, cx+2, y+5.2); cx += colW[i];
   });
   y += 8;
 
-  (plan.days || []).forEach((d, ri) => {
-    const items = d.items || [];
-    // Calculate row height
+  (plan.days||[]).forEach((d, ri) => {
+    const items = d.items||[];
+    // Pre-calc row height
     let rowH = 4;
     items.forEach(it => {
-      const tr = doc.splitTextToSize((it.title||'') + ': ' + (it.treatment||''), calCols[3] - 4);
-      rowH += tr.length * 3.5 + 7;
+      rowH += 7; // title + type/platform
+      const tr = doc.splitTextToSize((it.treatment||''), colW[3]-4);
+      rowH += tr.length*3.5 + 2;
+      if (it.caption) {
+        const cl = doc.splitTextToSize((it.caption||''), colW[3]-6);
+        rowH += cl.length*3.2 + 8;
+      }
     });
-    rowH = Math.max(rowH, 12);
-    chk(rowH + 2);
+    rowH = Math.max(rowH, 16);
+    chk(rowH+2);
 
-    // Alternating row bg
-    if (ri % 2 === 0) { doc.setFillColor(18, 19, 25); doc.rect(ml, y, pw - ml - mr, rowH, 'F'); }
+    // Row bg
+    doc.setFillColor(ri%2===0 ? 255:250, ri%2===0 ? 255:250, ri%2===0 ? 255:250);
+    if (ri%2!==0) doc.setFillColor(...SURFACE);
+    doc.rect(ml,y,pw-ml-mr,rowH,'F');
+    doc.setDrawColor(...OUTLINE); doc.line(ml,y+rowH,pw-mr,y+rowH);
 
-    // Day number
-    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(...GOLD);
-    doc.text('H' + (d.day||''), ml + 2, y + 6);
-
-    // Date label
+    cx = ml;
+    // Day
+    doc.setFontSize(8.5); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
+    doc.text('H'+(d.day||''), cx+2, y+7); cx += colW[0];
+    // Date
     doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-    doc.text(d.date || '', ml + calCols[0] + 2, y + 6);
-
+    doc.text(d.date||'', cx+2, y+7); cx += colW[1];
     // Phase badge
-    const phaseKey = d.phase === 'Awareness' ? '1' : d.phase === 'Excitement' ? '2' : d.phase === 'Pre-Launch' || d.phase === 'Launch' ? d.phase === 'Pre-Launch' ? '3' : '4' : '5';
-    const pc = phRGB[phaseKey] || phRGB['1'];
-    doc.setFillColor(...pc);
-    doc.roundedRect(ml + calCols[0] + calCols[1] + 1, y + 1.5, calCols[2] - 3, 5, 1.5, 1.5, 'F');
-    doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(10,10,10);
-    const phaseShort = (d.phase||'').substring(0, 10);
-    doc.text(phaseShort, ml + calCols[0] + calCols[1] + calCols[2]/2, y + 5, { align: 'center' });
+    const pk = phaseClass(d.phase||''); 
+    const pc = phRGB[pk]||FOREST; const pb = phBG[pk]||SURFACE;
+    doc.setFillColor(...pb); doc.roundedRect(cx+1,y+2,colW[2]-3,6,2,2,'F');
+    doc.setFontSize(6.5); doc.setFont('helvetica','bold'); doc.setTextColor(...pc);
+    doc.text((d.phase||'').substring(0,10), cx+colW[2]/2, y+5.8, {align:'center'});
+    cx += colW[2];
 
     // Items
-    let itemY = y + 3;
-    const itemsX = ml + calCols[0] + calCols[1] + calCols[2] + 2;
-    items.forEach(it => {
-      const typeColors = { Video:[209,161,83], Reels:[78,200,140], Carousel:[120,160,255], Story:[255,120,80], Thread:[220,120,255] };
-      const tc = typeColors[it.type] || GOLD;
+    let itemY = y+3;
+    const contentX = cx+2;
+    const contentW = colW[3]-4;
+
+    items.forEach((it,ii) => {
+      if (ii>0) { itemY += 4; }
       // Type + platform badges
-      doc.setFillColor(...tc, 0.3); // approximation
-      doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...tc);
-      doc.text('[' + (it.type||'') + '] ' + (it.platform||''), itemsX, itemY + 3.5);
+      const platC = platRGB[it.platform]||FOREST;
+      const platB = platBG[it.platform]||SURFACE;
+      doc.setFillColor(...SURFACE); doc.roundedRect(contentX, itemY, 20, 4.5, 1.5, 1.5, 'F');
+      doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
+      doc.text((it.type||'').substring(0,8), contentX+10, itemY+3.2, {align:'center'});
+      doc.setFillColor(...platB); doc.roundedRect(contentX+22, itemY, 22, 4.5, 1.5, 1.5, 'F');
+      doc.setTextColor(...platC);
+      doc.text(it.platform||'', contentX+33, itemY+3.2, {align:'center'});
+      itemY += 6;
+
       // Title
-      doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(...TEXT);
-      doc.text(it.title || '', itemsX, itemY + 7);
+      doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(...TEXT);
+      doc.text(it.title||'', contentX, itemY);
+      itemY += 4;
+
       // Treatment
-      doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-      const tr = doc.splitTextToSize(it.treatment || '', calCols[3] - 4);
-      doc.text(tr, itemsX, itemY + 10.5);
-      itemY += tr.length * 3.5 + 9;
+      doc.setFontSize(6.8); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+      const tr = doc.splitTextToSize(it.treatment||'', contentW);
+      doc.text(tr, contentX, itemY);
+      itemY += tr.length*3.5 + 1;
+
+      // Caption block
+      if (it.caption) {
+        const cl = doc.splitTextToSize(it.caption||'', contentW-4);
+        const capH = cl.length*3.2 + 7;
+        doc.setFillColor(227,233,229); // forest soft
+        doc.roundedRect(contentX, itemY, contentW, capH, 2, 2, 'F');
+        doc.setFillColor(...FOREST); doc.rect(contentX, itemY, 2, capH, 'F');
+        doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
+        doc.text('✍ CAPTION', contentX+4, itemY+4);
+        doc.setFont('helvetica','normal'); doc.setTextColor(...TEXT);
+        doc.setFontSize(6.5);
+        doc.text(cl, contentX+4, itemY+8);
+        itemY += capH + 2;
+      }
     });
 
-    doc.setDrawColor(30, 32, 40); doc.line(ml, y + rowH, pw - mr, y + rowH);
     y += rowH;
   });
-  y += 6;
 
-  // CAPTIONS
-  doc.addPage(); y = 16; addPageBg();
-  sectionTitle('Caption Siap Pakai');
-
-  const platRGB = { Instagram:[255,80,96], TikTok:[78,200,140], 'X/Twitter':[120,160,255], YouTube:[255,80,80] };
-
-  (plan.captions || []).forEach(c => {
-    const textLines = doc.splitTextToSize(c.caption || '', pw - ml - mr - 8);
-    const cardH = textLines.length * 3.8 + 18;
-    chk(cardH + 5);
-
-    // Card bg
-    doc.setFillColor(...DARK2); doc.roundedRect(ml, y, pw - ml - mr, cardH, 3, 3, 'F');
-    const pc2 = platRGB[c.platform] || GOLD;
-    doc.setFillColor(...pc2); doc.rect(ml, y, 3, cardH, 'F');
-    doc.roundedRect(ml, y, pw - ml - mr, cardH, 3, 3, 'S');
-
-    // Platform badge
-    doc.setFillColor(...pc2, 0.2);
-    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(...pc2);
-    doc.text(c.platform || '', ml + 8, y + 6);
-    doc.setTextColor(...MUTED);
-    doc.text(' · ' + (c.title||''), ml + 8 + doc.getStringUnitWidth(c.platform||'') * 7 / doc.internal.scaleFactor, y + 6);
-
-    // Caption text
-    doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...TEXT);
-    doc.text(textLines, ml + 8, y + 12);
-    y += cardH + 5;
-  });
-
-  // TIPS
-  sectionTitle('Tips Box Office');
-  (plan.tipsBoxOffice || []).forEach(t => {
+  // ── TIPS ──
+  doc.addPage();
+  doc.setFillColor(...OFFWHT); doc.rect(0,0,pw,ph,'F');
+  y = 16;
+  sectionTitle('Tips Kampanye');
+  (plan.tipsBoxOffice||[]).forEach(t => {
     chk(16);
-    doc.setFillColor(...DARK2); doc.roundedRect(ml, y, pw - ml - mr, 13, 2, 2, 'F');
-    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(...GOLD);
-    doc.text((t.icon||'') + '  ' + (t.title||''), ml + 5, y + 5);
-    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-    const dl = doc.splitTextToSize(t.desc||'', pw - ml - mr - 10);
-    doc.text(dl, ml + 5, y + 9.5);
-    y += Math.max(16, dl.length * 3.8 + 8);
+    doc.setFillColor(...WHITE); doc.roundedRect(ml,y,pw-ml-mr,13,2,2,'F');
+    doc.setDrawColor(...OUTLINE); doc.roundedRect(ml,y,pw-ml-mr,13,2,2,'S');
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
+    doc.text((t.icon||'')+'  '+(t.title||''), ml+5, y+5.5);
+    doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+    const dl = doc.splitTextToSize(t.desc||'', pw-ml-mr-10);
+    doc.text(dl, ml+5, y+9.5);
+    y += Math.max(16, dl.length*3.8+8);
   });
 
-  // ── FOOTER on all pages ──
-  const totalPages = doc.internal.getNumberOfPages();
-  for (let pg = 1; pg <= totalPages; pg++) {
+  // ── FOOTER all pages ──
+  const total = doc.internal.getNumberOfPages();
+  for (let pg=1;pg<=total;pg++) {
     doc.setPage(pg);
-    doc.setFillColor(...DARK2); doc.rect(0, ph - 10, pw, 10, 'F');
-    doc.setFillColor(...GOLD); doc.rect(0, ph - 10, pw, 0.5, 'F');
+    doc.setFillColor(...WHITE); doc.rect(0,ph-10,pw,10,'F');
+    doc.setDrawColor(...OUTLINE); doc.line(0,ph-10,pw,ph-10);
     doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-    doc.text((meta.title||'') + '  —  Box Office Campaign Plan', ml, ph - 4);
-    doc.text(pg + ' / ' + totalPages, pw - mr, ph - 4, { align: 'right' });
+    doc.text((meta.title||'')+' — Campaign Plan', ml, ph-4);
+    doc.text(pg+' / '+total, pw-mr, ph-4, {align:'right'});
   }
 
-  doc.save('campaign-' + (meta.title||'film').replace(/[^a-zA-Z0-9]/g,'-').toLowerCase() + '.pdf');
+  doc.save('campaign-'+(meta.title||'film').replace(/[^a-zA-Z0-9]/g,'-').toLowerCase()+'.pdf');
 }
-
 
 // Init event listeners
 document.addEventListener('DOMContentLoaded', () => {
