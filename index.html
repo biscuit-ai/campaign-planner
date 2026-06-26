@@ -941,9 +941,31 @@ async function callAPI(prompt, stepLabel) {
 }
 
 function safeJSON(raw) {
-  const s = raw.replace(/```json|```/g, '').trim();
-  const m = s.match(/\{[\s\S]*\}/);
-  return JSON.parse(m ? m[0] : s);
+  // Strip markdown code blocks
+  let s = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+  // Fix common Gemini issues: single quotes -> double quotes, trailing commas
+  // Extract JSON object or array
+  const objMatch = s.match(/\{[\s\S]*\}/);
+  const arrMatch = s.match(/\[[\s\S]*\]/);
+  // Pick the first match
+  let jsonStr = '';
+  const objIdx = s.indexOf('{');
+  const arrIdx = s.indexOf('[');
+  if (objIdx === -1 && arrIdx === -1) jsonStr = s;
+  else if (objIdx === -1) jsonStr = arrMatch ? arrMatch[0] : s;
+  else if (arrIdx === -1) jsonStr = objMatch ? objMatch[0] : s;
+  else jsonStr = objIdx < arrIdx ? (objMatch ? objMatch[0] : s) : (arrMatch ? arrMatch[0] : s);
+  
+  // Fix trailing commas before } or ]
+  jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
+  // Fix single-quoted strings (basic)
+  try {
+    return JSON.parse(jsonStr);
+  } catch(e) {
+    // Try fixing unquoted keys
+    const fixed = jsonStr.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+    return JSON.parse(fixed);
+  }
 }
 
 function parseCaption(raw) {
