@@ -914,28 +914,52 @@ function stepTick() {
 async function callAPI(prompt, stepLabel) {
   updateStep(stepLabel);
 
-  // 20s timeout per call
+  // 1. MASUKKAN API KEY GCP ANDA DI SINI (Gantikan teks di bawah)
+  const API_KEY = 'MASUKKAN_API_KEY_ANDA_DI_SINI'; 
+  
+  // URL asli perkhidmatan Google Gemini
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+
   const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(), 28000);
+  const tid = setTimeout(() => controller.abort(), 30000); // Timeout 30 saat
 
   try {
-    const res = await fetch(WORKER_URL, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        prompt: prompt,
-        max_tokens: 1200
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          maxOutputTokens: 1200,
+          temperature: 0.7,
+        }
       }),
       signal: controller.signal
     });
+    
     clearTimeout(tid);
+
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.error?.message || `HTTP Error: ${res.status}`);
+    }
+
     const data = await res.json();
-    if (data.error === 'timeout') throw new Error('Request timeout — coba lagi');
-    if (data.error) throw new Error(data.detail || data.error);
-    return data.content.map(b => b.text || '').join('').trim();
+    
+    // 2. MENGAMBIL TEKS SECARA TERUS DARI FORMAT ASLI GEMINI
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!text) {
+      throw new Error('Respons kosong atau format API telah berubah.');
+    }
+
+    return text.trim();
+
   } catch(e) {
     clearTimeout(tid);
-    if (e.name === 'AbortError') throw new Error('Request timeout — prompt terlalu besar atau koneksi lambat');
+    if (e.name === 'AbortError') throw new Error('Request timeout — AI sedang sibuk, sila cuba lagi.');
     throw e;
   }
 }
