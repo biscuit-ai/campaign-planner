@@ -655,6 +655,28 @@ footer {
     <div class="form-section-title">📋 Logistik Kampanye</div>
 
     <div class="fg">
+      <label>Platform Fokus</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;border-radius:var(--radius-pill);background:var(--surface2);border:1.5px solid var(--border2);font-size:0.82rem;font-weight:600;color:var(--muted);transition:all 0.15s" id="plat-all">
+          <input type="checkbox" id="chk-all" checked style="accent-color:var(--primary);width:14px;height:14px"> 🌐 Semua Platform
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;border-radius:var(--radius-pill);background:var(--surface2);border:1.5px solid var(--border2);font-size:0.82rem;font-weight:600;color:var(--muted);transition:all 0.15s" id="plat-ig">
+          <input type="checkbox" id="chk-ig" checked style="accent-color:var(--primary);width:14px;height:14px"> 📸 Instagram
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;border-radius:var(--radius-pill);background:var(--surface2);border:1.5px solid var(--border2);font-size:0.82rem;font-weight:600;color:var(--muted);transition:all 0.15s" id="plat-tt">
+          <input type="checkbox" id="chk-tt" checked style="accent-color:var(--primary);width:14px;height:14px"> 🎵 TikTok
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;border-radius:var(--radius-pill);background:var(--surface2);border:1.5px solid var(--border2);font-size:0.82rem;font-weight:600;color:var(--muted);transition:all 0.15s" id="plat-x">
+          <input type="checkbox" id="chk-x" checked style="accent-color:var(--primary);width:14px;height:14px"> 𝕏 X/Twitter
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;border-radius:var(--radius-pill);background:var(--surface2);border:1.5px solid var(--border2);font-size:0.82rem;font-weight:600;color:var(--muted);transition:all 0.15s" id="plat-yt">
+          <input type="checkbox" id="chk-yt" checked style="accent-color:var(--primary);width:14px;height:14px"> ▶️ YouTube
+        </label>
+      </div>
+      <p class="helper-text">💡 Pilih platform yang aktif dikelola tim konten kamu</p>
+    </div>
+
+    <div class="fg">
       <label>Skala Budget</label>
       <div class="budget-pill-group" id="budgetGroup">
         <button class="budget-pill budget active" data-key="budget" data-val="general" type="button">
@@ -1000,6 +1022,21 @@ function updateStep(label) {
 }
 
 async function generate() {
+  // Read selected platforms
+  const platChecks = {
+    ig: document.getElementById('chk-ig')?.checked !== false,
+    tt: document.getElementById('chk-tt')?.checked !== false,
+    x:  document.getElementById('chk-x')?.checked !== false,
+    yt: document.getElementById('chk-yt')?.checked !== false,
+  };
+  const selectedPlatforms = [
+    platChecks.ig ? 'Instagram' : null,
+    platChecks.tt ? 'TikTok'    : null,
+    platChecks.x  ? 'X/Twitter' : null,
+    platChecks.yt ? 'YouTube'   : null,
+  ].filter(Boolean);
+  const platformList = selectedPlatforms.length > 0 ? selectedPlatforms : ['Instagram','TikTok','X/Twitter','YouTube'];
+
   const title    = document.getElementById('movieTitle').value.trim();
   const synopsis = document.getElementById('movieSynopsis').value.trim();
   const genre    = document.getElementById('movieGenre').value;
@@ -1200,7 +1237,7 @@ async function generate() {
         + 'WAJIB: field "cap" HARUS ADA di setiap item, isi dengan caption siap posting Bahasa Indonesia untuk ' + film + '. '
         + 'Caption harus SPESIFIK menyebut judul film, karakter, atau elemen unik film — BUKAN caption generic. '
         + 'Sertakan emoji relevan dan 3-5 hashtag. Contoh format cap yang BENAR: "Ped baru aja ketemu Ern lagi... dan dia langsung bikin band??? 😭🎸 #SuckSeed #KlikFilm #FilmKomedi". '
-        + 'Variasikan platform (Instagram/TikTok/X/YouTube) dan type (Video/Carousel/Story/Reels/Thread). '
+        + 'HANYA gunakan platform berikut (WAJIB): ' + platformList.join(', ') + '. Jangan pakai platform lain. Variasikan type (Video/Carousel/Story/Reels/Thread). '
         + 'Tone: ' + toneCtx.substring(0, 60) + '. Fase: ' + getPhase(d1) + ' ke ' + getPhase(d2) + '. JSON only, tidak ada teks lain.';
 
       const rCal = await callAPI(prompt, 'Jadwal H' + d1 + '–H' + d2 + '...');
@@ -1295,11 +1332,16 @@ async function generate() {
       phases:        phData.phases   || [],
       days:          allDays,
       captions,
-      tipsBoxOffice: [
-        { icon: '🎯', title: 'Maksimalkan Opening Weekend', desc: 'Fokus penuh 3 hari pertama, penentu perpanjangan jadwal bioskop' },
-        { icon: '📱', title: 'Viral TikTok Organik', desc: 'Buat challenge atau sound original yang mudah ditiru untuk efek snowball' },
-        { icon: '🤝', title: 'Micro Influencer Lokal', desc: '10 micro influencer lebih efektif dari 1 selebritis untuk komunitas' },
-        { icon: '🎟️', title: 'Nonton Bareng Komunitas', desc: 'Dorong group booking untuk isi kursi di hari weekday sepi' }
+      tipsBoxOffice: isOTT ? [
+        { icon: '📺', title: 'Maksimalkan First 48 Jam', desc: 'Algoritma platform streaming sangat memperhatikan jumlah play di 48 jam pertama — semua effort promosi fokus ke sana' },
+        { icon: '📱', title: 'Viral TikTok & Reels Organik', desc: 'Buat challenge atau sound original dari OST film yang mudah ditiru kreator lain untuk efek snowball' },
+        { icon: '🤝', title: 'Micro Influencer & Review Creator', desc: 'Minta 10-20 micro influencer review jujur — lebih dipercaya dari endorsement berbayar untuk konten streaming' },
+        { icon: '💬', title: 'Dorong User Generated Content', desc: 'Ajak penonton share reaction video, screenshot scene favorit, atau quote film di semua platform' }
+      ] : [
+        { icon: '🎯', title: 'Maksimalkan Opening Weekend', desc: 'Fokus penuh 3 hari pertama, penentu perpanjangan jadwal dan jumlah layar bioskop' },
+        { icon: '📱', title: 'Viral TikTok Organik', desc: 'Buat challenge atau sound original yang mudah ditiru untuk efek snowball sebelum tayang' },
+        { icon: '🤝', title: 'Micro Influencer Lokal', desc: '10 micro influencer lebih efektif dari 1 selebritis untuk membangun komunitas penonton' },
+        { icon: '🎟️', title: 'Nonton Bareng Komunitas', desc: 'Dorong group booking untuk isi kursi di hari weekday yang biasanya sepi' }
       ]
     };
 
@@ -1414,7 +1456,7 @@ function renderResults() {
     + '<div class="cal-wrap"><table><thead><tr><th style="width:40px">Hari</th><th style="width:90px">Tanggal</th><th style="width:100px">Fase</th><th>Konten Harian (2x Post)</th></tr></thead><tbody>' + calRows + '</tbody></table></div>'
     + '<div class="sec-title">✍️ Caption Siap Pakai</div>'
     + caps
-    + '<div class="sec-title">💡 Tips Box Office</div>'
+    + '<div class="sec-title">💡 Tips Kampanye ' + (releaseType === 'ott' ? 'OTT' : 'Bioskop') + '</div>'
     + '<div class="tips-grid">' + tips + '</div>'
     + '<div class="result-actions" style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border)">'
     + '<button class="act-btn" id="btnReset">← Buat Baru</button>'
@@ -1936,7 +1978,10 @@ function exportPDF() {
         doc.text('✍ CAPTION', contentX+4, itemY+4);
         doc.setFont('helvetica','normal'); doc.setTextColor(...TEXT);
         doc.setFontSize(6.5);
-        doc.text(cl, contentX+4, itemY+8);
+        // Strip emoji for PDF rendering
+        const cleanCap = (it.caption||'').replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, '').replace(/\s+/g,' ').trim();
+        const clClean = doc.splitTextToSize(cleanCap, contentW-4);
+        doc.text(clClean, contentX+4, itemY+8);
         itemY += capH + 2;
       }
     });
@@ -1948,7 +1993,7 @@ function exportPDF() {
   doc.addPage();
   doc.setFillColor(...OFFWHT); doc.rect(0,0,pw,ph,'F');
   y = 16;
-  sectionTitle('Tips Kampanye');
+  sectionTitle('Tips Kampanye ' + (releaseType === 'ott' ? 'OTT' : 'Bioskop'));
   (plan.tipsBoxOffice||[]).forEach((t,ti) => {
     chk(16);
     const nums = ['01','02','03','04','05'];
@@ -2035,6 +2080,41 @@ document.addEventListener('DOMContentLoaded', () => {
       heroBtn.parentElement.appendChild(hBtn);
     }
   }
+
+  // Platform checkbox logic
+  const allChk = document.getElementById('chk-all');
+  const platChks = ['chk-ig','chk-tt','chk-x','chk-yt'].map(id => document.getElementById(id));
+  const updatePlatStyle = () => {
+    ['plat-ig','plat-tt','plat-x','plat-yt'].forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const active = platChks[i]?.checked;
+      el.style.borderColor = active ? 'var(--primary)' : '';
+      el.style.color = active ? 'var(--primary)' : '';
+      el.style.background = active ? 'var(--primary-soft)' : '';
+    });
+    const allActive = platChks.every(c => c?.checked);
+    const allEl = document.getElementById('plat-all');
+    if (allEl) {
+      allEl.style.borderColor = allActive ? 'var(--primary)' : '';
+      allEl.style.color = allActive ? 'var(--primary)' : '';
+      allEl.style.background = allActive ? 'var(--primary-soft)' : '';
+    }
+  };
+  if (allChk) {
+    allChk.addEventListener('change', () => {
+      platChks.forEach(c => { if(c) c.checked = allChk.checked; });
+      updatePlatStyle();
+    });
+  }
+  platChks.forEach(chk => {
+    if (!chk) return;
+    chk.addEventListener('change', () => {
+      if (allChk) allChk.checked = platChks.every(c => c?.checked);
+      updatePlatStyle();
+    });
+  });
+  updatePlatStyle();
 
   document.querySelectorAll('.pill, .budget-pill').forEach(btn => {
     btn.addEventListener('click', function() { setParam(this); });
