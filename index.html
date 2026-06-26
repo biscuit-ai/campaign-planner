@@ -931,7 +931,7 @@ async function callAPI(prompt, stepLabel) {
     clearTimeout(tid);
     const data = await res.json();
     if (data.error === 'timeout') throw new Error('Request timeout — coba lagi');
-    if (data.error) throw new Error(typeof data.error === 'object' ? JSON.stringify(data.error) : data.error);
+    if (data.error) throw new Error(data.detail || data.error);
     return data.content.map(b => b.text || '').join('').trim();
   } catch(e) {
     clearTimeout(tid);
