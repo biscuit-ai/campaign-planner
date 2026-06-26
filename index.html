@@ -923,9 +923,8 @@ async function callAPI(prompt, stepLabel) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 900,
-        messages: [{ role: 'user', content: prompt }]
+        prompt: prompt,
+        max_tokens: 1200
       }),
       signal: controller.signal
     });
