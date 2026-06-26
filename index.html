@@ -924,7 +924,7 @@ async function callAPI(prompt, stepLabel) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prompt: prompt,
-        max_tokens: 1200
+        max_tokens: 2000
       }),
       signal: controller.signal
     });
