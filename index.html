@@ -601,6 +601,47 @@ footer { background: var(--surface); border-top: 1px solid var(--border); paddin
 </section>
 </div>
 
+
+<!-- CONTENT PILLAR MODAL -->
+<div id="pillarModal" style="display:none;position:fixed;inset:0;z-index:150;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);overflow-y:auto;padding:2rem 1rem">
+  <div style="max-width:680px;margin:0 auto;background:var(--surface);border-radius:24px;padding:2rem;box-shadow:var(--shadow-lg)">
+    
+    <!-- Header -->
+    <div style="margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-family:'Sora',sans-serif;font-size:1.2rem;font-weight:700;color:var(--primary)">🏛️ Content Pillar</div>
+        <button onclick="skipPillar()" style="background:var(--surface2);border:1px solid var(--border2);border-radius:99px;padding:6px 14px;font-size:0.78rem;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif">Skip →</button>
+      </div>
+      <p style="font-size:0.82rem;color:var(--muted);line-height:1.6">Define kategori konten tetap kamu — AI akan distribute kalender sesuai pillar ini. <strong style="color:var(--text)">Opsional tapi bikin output jauh lebih terstruktur.</strong></p>
+    </div>
+
+    <!-- Auto Generate -->
+    <div style="background:var(--primary-soft);border:1px solid var(--primary-mid);border-radius:12px;padding:1rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:0.82rem;font-weight:700;color:var(--primary);margin-bottom:2px">✨ Auto-generate pillar</div>
+        <div style="font-size:0.75rem;color:var(--muted)">AI akan suggest 4 content pillar yang cocok berdasarkan kategori & data campaign kamu</div>
+      </div>
+      <button id="autoPillarBtn" onclick="autoGeneratePillar()" style="padding:8px 18px;border-radius:99px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;white-space:nowrap">Generate ✦</button>
+    </div>
+
+    <!-- Pillar Cards -->
+    <div id="pillarCards" style="display:flex;flex-direction:column;gap:10px;margin-bottom:1.5rem">
+      <!-- Injected by JS -->
+    </div>
+
+    <!-- Add Pillar Button -->
+    <button onclick="addPillarCard()" style="width:100%;padding:10px;border-radius:12px;border:1.5px dashed var(--border2);background:transparent;color:var(--muted);font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.15s;margin-bottom:1.5rem" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--muted)'">
+      + Tambah Pillar
+    </button>
+
+    <!-- Actions -->
+    <div style="display:flex;gap:8px">
+      <button onclick="skipPillar()" style="flex:1;padding:12px;border-radius:99px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--muted);font-family:'Inter',sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer">Lewati</button>
+      <button onclick="savePillar()" style="flex:2;padding:12px;border-radius:99px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer">Simpan & Lanjut →</button>
+    </div>
+  </div>
+</div>
+
 <!-- HISTORY MODAL -->
 <div id="historyModal">
   <div class="history-inner">
@@ -1137,9 +1178,8 @@ function selectCategory(card) {
 
 function startWithCategory() {
   if (!selectedCat) return;
-  const cat = CATEGORIES[selectedCat];
-  document.getElementById('formSection').style.display = 'block';
-  renderForm(cat);
+  contentPillars = []; // reset pillars
+  showPillarModal();
   document.getElementById('app').scrollIntoView({ behavior:'smooth' });
 }
 
@@ -1581,11 +1621,13 @@ async function generate() {
   const catCtx = buildCategoryContext(cat, extraData, relFmt, isClassicFilm);
   const notesCtx = notes ? 'CATATAN KHUSUS (WAJIB DIIKUTI):\n'+notes+'\n' : '';
 
+  const pillarCtx = getPillarContext();
   const masterCtx = 'KATEGORI: '+cat.name+'.\n'
     +'TARGET AUDIENS: '+audienceCtx+'.\n'
     +'TONE OF VOICE: '+toneCtx+'.\n'
     +'BUDGET: '+budgetCtx+'.\n'
     +catCtx
+    +(pillarCtx?'\n'+pillarCtx:'')
     +(notesCtx?'\n'+notesCtx:'');
 
   const shortDesc = desc.length > 180 ? desc.substring(0,180)+'...' : desc;
@@ -1886,6 +1928,13 @@ function renderResults() {
         ? '<div style="margin-top:7px;padding:8px 10px;background:var(--primary-soft);border-left:2px solid var(--primary);border-radius:0 6px 6px 0;font-size:0.75rem;line-height:1.6;white-space:pre-wrap">'
           +'<span style="font-size:0.62rem;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">✍️ Caption</span>'
           +(it.caption||'').replace(/</g,'&lt;')+'</div>' : '';
+      const capStr = JSON.stringify(it.caption||'').replace(/'/g,"&#39;");
+      const titleStr = JSON.stringify(it.title||'').replace(/'/g,"&#39;");
+      const proTools = isPremium() ? '<div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">'
+          +'<button onclick="showCaptionVariations('+capStr+',\''+it.platform+'\',\''+it.title+'\')" style="display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:99px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-family:Inter,sans-serif;font-size:0.68rem;font-weight:600;cursor:pointer">✍️ Variations</button>'
+          +'<button onclick="showHookGenerator('+titleStr+',\''+it.platform+'\')" style="display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:99px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-family:Inter,sans-serif;font-size:0.68rem;font-weight:600;cursor:pointer">⚡ A/B Hook</button>'
+          +'<button onclick="showContentBrief('+JSON.stringify(it)+','+d.day+',\''+d.phase+'\')" style="display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:99px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-family:Inter,sans-serif;font-size:0.68rem;font-weight:600;cursor:pointer">📋 Brief</button>'
+          +'</div>' : '';
       return '<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">'
         +'<span style="font-size:1rem;flex-shrink:0;margin-top:2px">'+icon+'</span>'
         +'<div style="flex:1;min-width:0">'
@@ -1895,7 +1944,7 @@ function renderResults() {
         +'</div>'
         +'<div style="font-size:0.83rem;font-weight:700;margin-bottom:3px">'+(it.title||'')+'</div>'
         +'<div style="font-size:0.78rem;color:var(--muted);line-height:1.5">'+(it.treatment||'')+'</div>'
-        +capBlock+'</div></div>';
+        +capBlock+proTools+'</div></div>';
     }).join('');
     const phType=d.phase==='Awareness'?'1':d.phase==='Excitement'?'2':d.phase==='Pre-Launch'||d.phase==='Engagement'?'3':d.phase==='Launch'?'4':'5';
     return '<tr>'
@@ -2276,7 +2325,7 @@ function printPlan() {
           <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span><strong>Export PDF & Print</strong></span></div>
           <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span><strong>Save History 6 campaign</strong></span></div>
         </div>
-        <a href="https://wa.me/6281234567890?text=Halo%2C+saya+mau+berlangganan+CampaignPlanner+Pro+Monthly+Rp+49.000%2Fbulan" target="_blank" style="display:block;width:100%;padding:13px;border-radius:99px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;text-align:center;text-decoration:none">Beli via WhatsApp →</a>
+        <a href="https://wa.me/6282351804949?text=Halo%2C+saya+mau+berlangganan+CampaignPlanner+Pro+Monthly+Rp+49.000%2Fbulan" target="_blank" style="display:block;width:100%;padding:13px;border-radius:99px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;text-align:center;text-decoration:none">Beli via WhatsApp →</a>
       </div>
 
       <!-- PRO ANNUAL -->
@@ -2294,7 +2343,7 @@ function printPlan() {
           <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Prioritas support</span></div>
           <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Early access fitur baru</span></div>
         </div>
-        <a href="https://wa.me/6281234567890?text=Halo%2C+saya+mau+berlangganan+CampaignPlanner+Pro+Annual+Rp+399.000%2Ftahun" target="_blank" style="display:block;width:100%;padding:13px;border-radius:99px;border:1.5px solid var(--primary);background:var(--primary-soft);color:var(--primary);font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;text-align:center;text-decoration:none">Beli via WhatsApp →</a>
+        <a href="https://wa.me/6282351804949?text=Halo%2C+saya+mau+berlangganan+CampaignPlanner+Pro+Annual+Rp+399.000%2Ftahun" target="_blank" style="display:block;width:100%;padding:13px;border-radius:99px;border:1.5px solid var(--primary);background:var(--primary-soft);color:var(--primary);font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;text-align:center;text-decoration:none">Beli via WhatsApp →</a>
       </div>
 
     </div>
@@ -2306,7 +2355,7 @@ function printPlan() {
         <div style="font-family:'Sora',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px">Rp 149.000<span style="font-size:1rem;font-weight:400;color:var(--muted)">/bulan</span></div>
         <p style="font-size:0.82rem;color:var(--muted)">Semua fitur Pro · 5 seat · Cocok untuk tim marketing & agency</p>
       </div>
-      <a href="https://wa.me/6281234567890?text=Halo%2C+saya+tertarik+paket+Agency+CampaignPlanner" target="_blank" style="padding:12px 24px;border-radius:99px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;white-space:nowrap">Hubungi Kami →</a>
+      <a href="https://wa.me/6282351804949?text=Halo%2C+saya+tertarik+paket+Agency+CampaignPlanner" target="_blank" style="padding:12px 24px;border-radius:99px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;white-space:nowrap">Hubungi Kami →</a>
     </div>
 
     <!-- FAQ -->
@@ -2661,6 +2710,460 @@ function updateNavUI() {
     }
   }
 }
+
+
+// ── CONTENT PILLAR SYSTEM ──
+let contentPillars = []; // Array of {icon, name, desc, ratio}
+
+const PILLAR_COLORS = [
+  { bg: 'rgba(78,200,122,0.12)', color: '#4ec87a', border: 'rgba(78,200,122,0.3)' },
+  { bg: 'rgba(120,160,255,0.12)', color: '#78a0ff', border: 'rgba(120,160,255,0.3)' },
+  { bg: 'rgba(255,120,80,0.12)', color: '#ff7850', border: 'rgba(255,120,80,0.3)' },
+  { bg: 'rgba(220,120,255,0.12)', color: '#dc78ff', border: 'rgba(220,120,255,0.3)' },
+  { bg: 'rgba(255,200,50,0.12)', color: '#f0c832', border: 'rgba(255,200,50,0.3)' },
+];
+
+const DEFAULT_PILLARS = {
+  film:     [{icon:'🎬',name:'Behind The Scenes',desc:'Proses produksi, bloopers, cerita di balik layar'},{icon:'🎭',name:'Character & Story',desc:'Perkenalan karakter, teaser cerita, easter eggs'},{icon:'💬',name:'Social Proof',desc:'Review penonton, reaksi, ulasan media'},{icon:'🔥',name:'Hype & Countdown',desc:'Countdown tayang, FOMO content, call to action'}],
+  music:    [{icon:'🎵',name:'Music & Lyrics',desc:'Cuplikan lagu, lirik, proses rekaman'},{icon:'🎤',name:'Artist Story',desc:'Cerita di balik lagu, personal journey, BTS studio'},{icon:'🎧',name:'Fan Engagement',desc:'Repost fan content, Q&A, challenge'},{icon:'🚀',name:'Launch & Promo',desc:'Countdown rilis, premiere, konser announcement'}],
+  brand:    [{icon:'💡',name:'Edukasi',desc:'Tips, how-to, fakta menarik tentang produk/industri'},{icon:'🎬',name:'Behind The Brand',desc:'Proses produksi, tim, values perusahaan'},{icon:'⭐',name:'Social Proof',desc:'Testimoni, review, user-generated content'},{icon:'🎁',name:'Promo & Offer',desc:'Diskon, giveaway, limited offer, CTA beli'}],
+  creator:  [{icon:'📚',name:'Value & Edukasi',desc:'Tips, tutorial, insights dari pengalaman'},{icon:'😄',name:'Personal & Lifestyle',desc:'Keseharian, behind-the-scenes hidup kreator'},{icon:'🤝',name:'Community',desc:'Q&A, collab, repost follower, shoutout'},{icon:'💼',name:'Portfolio & Karya',desc:'Showcase project, hasil kerja, pencapaian'}],
+  food:     [{icon:'🍽️',name:'Food Porn',desc:'Foto/video makanan estetik, close-up, plating'},{icon:'👨‍🍳',name:'Kitchen Stories',desc:'Proses masak, chef story, resep rahasia'},{icon:'⭐',name:'Customer Love',desc:'Review pelanggan, foto customer, testimoni'},{icon:'🎉',name:'Promo & Event',desc:'Menu baru, diskon, event spesial, grand opening'}],
+  event:    [{icon:'🎪',name:'Event Preview',desc:'Teaser venue, lineup, hal yang bisa diharapkan'},{icon:'🎤',name:'Speaker/Performer',desc:'Spotlight pembicara, artis, bintang tamu'},{icon:'📸',name:'FOMO Content',desc:'Behind prep, rehearsal, exclusive sneak peek'},{icon:'🎟️',name:'Ticket & Info',desc:'Cara beli tiket, info praktis, countdown'}],
+  finance:  [{icon:'📚',name:'Edukasi Finansial',desc:'Tips menabung, investasi, literasi keuangan'},{icon:'💡',name:'Product Feature',desc:'Cara pakai produk, fitur unggulan, tutorial'},{icon:'✅',name:'Trust & Security',desc:'Keamanan data, regulasi, track record'},{icon:'👥',name:'User Story',desc:'Testimoni nyata, success story pelanggan'}],
+  fashion:  [{icon:'👗',name:'Lookbook',desc:'Styling outfit, mix & match, inspirasi gaya'},{icon:'🎬',name:'Brand Story',desc:'Behind desain, proses produksi, brand values'},{icon:'⭐',name:'Customer Style',desc:'User-generated content, repost customer, review'},{icon:'🛍️',name:'Collection & Promo',desc:'New arrival, limited edition, campaign launch'}],
+  gaming:   [{icon:'🎮',name:'Gameplay',desc:'Clip epic, tips & trik, highlight match'},{icon:'🏆',name:'Kompetisi',desc:'Tournament update, ranking, achievement'},{icon:'👥',name:'Community',desc:'Fan art, meme, community challenge'},{icon:'📢',name:'Update & News',desc:'Patch notes, event in-game, collab announcement'}],
+  nonprofit:[{icon:'❤️',name:'Impact Story',desc:'Cerita nyata orang yang terbantu, perubahan terjadi'},{icon:'📊',name:'Progress & Data',desc:'Update pencapaian, transparansi penggunaan dana'},{icon:'🤝',name:'Community Action',desc:'Volunteer stories, komunitas yang terlibat'},{icon:'📢',name:'Call to Action',desc:'Donasi, petisi, share campaign, awareness'}],
+};
+
+function showPillarModal() {
+  const cat = selectedCat || 'film';
+  // Initialize with defaults if empty
+  if (contentPillars.length === 0) {
+    contentPillars = (DEFAULT_PILLARS[cat] || DEFAULT_PILLARS.brand).map((p,i) => ({...p, ratio: 25, colorIdx: i}));
+  }
+  renderPillarCards();
+  document.getElementById('pillarModal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function hidePillarModal() {
+  document.getElementById('pillarModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function skipPillar() {
+  contentPillars = [];
+  hidePillarModal();
+  renderForm(CATEGORIES[selectedCat]);
+}
+
+function savePillar() {
+  // Read current values from inputs
+  const cards = document.querySelectorAll('.pillar-card');
+  contentPillars = [];
+  cards.forEach((card, i) => {
+    const name = card.querySelector('.pillar-name')?.value.trim();
+    const desc = card.querySelector('.pillar-desc')?.value.trim();
+    const icon = card.querySelector('.pillar-icon')?.value.trim() || '📌';
+    if (name) contentPillars.push({ icon, name, desc, ratio: Math.round(100/cards.length), colorIdx: i });
+  });
+  hidePillarModal();
+  renderForm(CATEGORIES[selectedCat]);
+}
+
+function addPillarCard(pillar = null) {
+  const i = document.querySelectorAll('.pillar-card').length;
+  const col = PILLAR_COLORS[i % PILLAR_COLORS.length];
+  const card = document.createElement('div');
+  card.className = 'pillar-card';
+  card.style.cssText = `background:${col.bg};border:1.5px solid ${col.border};border-radius:12px;padding:1rem;display:grid;grid-template-columns:60px 1fr auto;gap:10px;align-items:start`;
+  card.innerHTML = `
+    <div>
+      <label style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Icon</label>
+      <input class="pillar-icon" type="text" value="${pillar?.icon||'📌'}" maxlength="2" style="width:100%;background:var(--surface);border:1.5px solid var(--border2);border-radius:8px;padding:8px;color:var(--text);font-family:'Inter',sans-serif;font-size:1.2rem;text-align:center"/>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div>
+        <label style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Nama Pillar *</label>
+        <input class="pillar-name" type="text" value="${pillar?.name||''}" placeholder="Contoh: Edukasi" style="width:100%;background:var(--surface);border:1.5px solid var(--border2);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:600"/>
+      </div>
+      <div>
+        <label style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Deskripsi</label>
+        <input class="pillar-desc" type="text" value="${pillar?.desc||''}" placeholder="Jenis konten dalam pillar ini" style="width:100%;background:var(--surface);border:1.5px solid var(--border2);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.82rem"/>
+      </div>
+    </div>
+    <button onclick="this.closest('.pillar-card').remove()" style="margin-top:20px;width:28px;height:28px;border-radius:99px;border:1px solid rgba(240,80,96,0.2);background:rgba(240,80,96,0.08);color:var(--red);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+  `;
+  document.getElementById('pillarCards').appendChild(card);
+}
+
+function renderPillarCards() {
+  const container = document.getElementById('pillarCards');
+  container.innerHTML = '';
+  const pillars = contentPillars.length > 0 ? contentPillars : (DEFAULT_PILLARS[selectedCat] || DEFAULT_PILLARS.brand);
+  pillars.forEach(p => addPillarCard(p));
+}
+
+async function autoGeneratePillar() {
+  const btn = document.getElementById('autoPillarBtn');
+  const cat = CATEGORIES[selectedCat];
+  const name = document.getElementById('mainName')?.value || '';
+  
+  if (!isPremium() && getRemainingGenerates() <= 0) {
+    showLimitModal(false, 0, 0, FREE_LIMIT);
+    return;
+  }
+
+  btn.textContent = '⏳ Generating...';
+  btn.disabled = true;
+
+  try {
+    const prompt = `Kamu adalah content strategist untuk ${cat?.name || 'brand'}.
+Campaign: "${name || 'Campaign baru'}" — kategori ${cat?.name}.
+Generate 4 content pillar yang ideal untuk campaign ini.
+Jawab HANYA JSON array:
+[{"icon":"emoji","name":"Nama Pillar (2-3 kata)","desc":"Deskripsi singkat jenis konten (max 10 kata)"},...]
+JSON only, 4 pillar saja.`;
+
+    const result = await callAPI(prompt, 'Generate content pillar...');
+    const clean = result.replace(/\`\`\`json|\`\`\`/g,'').trim();
+    const arr = JSON.parse(clean.match(/\[[\s\S]*\]/)?.[0] || clean);
+    
+    contentPillars = arr.map((p,i) => ({...p, ratio:25, colorIdx:i}));
+    renderPillarCards();
+    btn.textContent = '✓ Done!';
+    setTimeout(() => { btn.textContent = 'Generate ✦'; btn.disabled = false; }, 1500);
+  } catch(e) {
+    btn.textContent = 'Generate ✦';
+    btn.disabled = false;
+    // Fallback to defaults
+    contentPillars = (DEFAULT_PILLARS[selectedCat] || DEFAULT_PILLARS.brand).map((p,i) => ({...p, colorIdx:i}));
+    renderPillarCards();
+  }
+}
+
+function getPillarContext() {
+  if (!contentPillars || contentPillars.length === 0) return '';
+  const pillarList = contentPillars.map(p => `"${p.icon} ${p.name}": ${p.desc}`).join(', ');
+  return `CONTENT PILLAR (distribusikan konten secara merata): ${pillarList}. Setiap pillar harus muncul setidaknya 1-2x per minggu dalam kalender.`;
+}
+
+
+// ── CAPTION VARIATIONS ──
+function showCaptionVariations(originalCaption, platform, title) {
+  if (!isPremium()) { showUpgradePrompt('Caption Variations'); return; }
+  
+  const modal = document.createElement('div');
+  modal.id = 'capVarModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:250;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);overflow-y:auto;padding:2rem 1rem;display:flex;align-items:flex-start;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:24px;padding:2rem;max-width:600px;width:100%;margin-top:2rem;border:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-family:'Sora',sans-serif;font-size:1rem;font-weight:700;color:var(--primary)">✍️ Caption Variations</div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:2px">${platform} · ${title}</div>
+        </div>
+        <button onclick="document.getElementById('capVarModal').remove()" style="background:var(--surface2);border:1px solid var(--border2);border-radius:99px;padding:6px 14px;font-size:0.78rem;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif">✕</button>
+      </div>
+      <div id="capVarList" style="display:flex;flex-direction:column;gap:12px">
+        <div style="text-align:center;padding:2rem;color:var(--muted)">
+          <div style="font-size:1.5rem;margin-bottom:8px">⏳</div>
+          <div style="font-size:0.85rem">Generating 3 variasi caption...</div>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  // Generate variations
+  generateCaptionVariations(originalCaption, platform, title);
+}
+
+async function generateCaptionVariations(original, platform, title) {
+  try {
+    const prompt = `Kamu adalah copywriter senior social media.
+Caption asli untuk ${platform}: "${original}"
+Judul konten: "${title}"
+Campaign: ${meta.title || ''} — ${CATEGORIES[selectedCat]?.name || ''}
+
+Buat 3 variasi caption yang berbeda tone:
+1. FORMAL — profesional, elegan, authority
+2. CASUAL — santai, friendly, conversational  
+3. VIRAL — hype, FOMO, pop-culture, emoji banyak
+
+Jawab HANYA JSON:
+[
+  {"tone":"Formal","caption":"[caption formal lengkap dengan hashtag]"},
+  {"tone":"Casual","caption":"[caption casual lengkap dengan hashtag]"},
+  {"tone":"Viral","caption":"[caption viral lengkap dengan hashtag]"}
+]
+JSON only.`;
+
+    const result = await callAPI(prompt, 'Generating caption variations...');
+    const clean = result.replace(/\`\`\`json|\`\`\`/g,'').trim();
+    const arr = JSON.parse(clean.match(/\[[\s\S]*\]/)?.[0] || clean);
+
+    const toneColors = {
+      'Formal': { bg:'rgba(120,160,255,0.1)', color:'#78a0ff', border:'rgba(120,160,255,0.25)' },
+      'Casual': { bg:'rgba(78,200,122,0.1)', color:'#4ec87a', border:'rgba(78,200,122,0.25)' },
+      'Viral':  { bg:'rgba(255,120,80,0.1)', color:'#ff7850', border:'rgba(255,120,80,0.25)' },
+    };
+
+    const list = document.getElementById('capVarList');
+    if (!list) return;
+    window._capVariations = arr;
+    list.innerHTML = arr.map((v,vi) => {
+      const col = toneColors[v.tone] || toneColors['Casual'];
+      const safe = (v.caption||'').replace(/</g,'&lt;');
+      return `<div style="background:${col.bg};border:1px solid ${col.border};border-radius:12px;padding:1rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:0.72rem;font-weight:700;color:${col.color};text-transform:uppercase;letter-spacing:.06em">${v.tone}</span>
+          <button onclick="copyCapVariation(vi)" style="background:var(--surface);border:1px solid var(--border2);border-radius:99px;padding:4px 12px;font-size:0.7rem;font-weight:600;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif">Copy</button>
+        </div>
+        <div style="font-size:0.82rem;line-height:1.7;white-space:pre-wrap;color:var(--text)">${safe}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    const list = document.getElementById('capVarList');
+    if (list) list.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--red);font-size:0.85rem">Gagal generate variasi. Coba lagi.</div>';
+  }
+}
+
+function copyCapVar(text) {
+  const decoded = text.replace(/\n/g, '\n');
+  navigator.clipboard.writeText(decoded).then(() => showToastGlobal('Caption di-copy!'));
+}
+
+// ── A/B HOOK GENERATOR ──
+function showHookGenerator(contentTitle, platform) {
+  if (!isPremium()) { showUpgradePrompt('A/B Hook Generator'); return; }
+  
+  const modal = document.createElement('div');
+  modal.id = 'hookModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:250;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);overflow-y:auto;padding:2rem 1rem;display:flex;align-items:flex-start;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:24px;padding:2rem;max-width:600px;width:100%;margin-top:2rem;border:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-family:'Sora',sans-serif;font-size:1rem;font-weight:700;color:var(--primary)">⚡ A/B Hook Generator</div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:2px">${platform} · ${contentTitle}</div>
+        </div>
+        <button onclick="document.getElementById('hookModal').remove()" style="background:var(--surface2);border:1px solid var(--border2);border-radius:99px;padding:6px 14px;font-size:0.78rem;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif">✕</button>
+      </div>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:1.25rem;line-height:1.6">3 versi opening/hook yang bisa kamu A/B test. Pakai yang perform terbaik untuk konten berikutnya.</p>
+      <div id="hookList" style="display:flex;flex-direction:column;gap:10px">
+        <div style="text-align:center;padding:2rem;color:var(--muted)">
+          <div style="font-size:1.5rem;margin-bottom:8px">⚡</div>
+          <div style="font-size:0.85rem">Generating 3 versi hook...</div>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  generateHooks(contentTitle, platform);
+}
+
+async function generateHooks(contentTitle, platform) {
+  try {
+    const prompt = `Kamu adalah viral content strategist.
+Konten: "${contentTitle}" untuk ${platform}
+Campaign: ${meta.title || ''} — ${CATEGORIES[selectedCat]?.name || ''}
+
+Buat 3 versi HOOK/OPENING yang berbeda strategi (maks 2 kalimat per hook):
+1. CURIOSITY GAP — bikin penasaran, cliffhanger
+2. BOLD STATEMENT — pernyataan kontroversial atau mengejutkan
+3. RELATABLE — momen yang semua orang pernah rasakan
+
+Jawab HANYA JSON:
+[
+  {"type":"Curiosity Gap","hook":"[2 kalimat opening]","why":"[alasan kenapa hook ini efektif, 1 kalimat]"},
+  {"type":"Bold Statement","hook":"[2 kalimat opening]","why":"[alasan, 1 kalimat]"},
+  {"type":"Relatable","hook":"[2 kalimat opening]","why":"[alasan, 1 kalimat]"}
+]
+JSON only.`;
+
+    const result = await callAPI(prompt, 'Generating hooks...');
+    const clean = result.replace(/\`\`\`json|\`\`\`/g,'').trim();
+    const arr = JSON.parse(clean.match(/\[[\s\S]*\]/)?.[0] || clean);
+
+    const hookColors = {
+      'Curiosity Gap':  { bg:'rgba(220,120,255,0.1)', color:'#dc78ff', border:'rgba(220,120,255,0.25)', icon:'🎣' },
+      'Bold Statement': { bg:'rgba(255,120,80,0.1)',  color:'#ff7850', border:'rgba(255,120,80,0.25)',  icon:'💥' },
+      'Relatable':      { bg:'rgba(78,200,122,0.1)',  color:'#4ec87a', border:'rgba(78,200,122,0.25)', icon:'💚' },
+    };
+
+    const list = document.getElementById('hookList');
+    if (!list) return;
+    window._hookItems = arr;
+    list.innerHTML = arr.map((h,i) => {
+      const col = hookColors[h.type] || hookColors['Relatable'];
+      return `<div style="background:${col.bg};border:1px solid ${col.border};border-radius:12px;padding:1rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span>${col.icon}</span>
+            <span style="font-size:0.72rem;font-weight:700;color:${col.color};text-transform:uppercase;letter-spacing:.06em">${h.type}</span>
+            <span style="font-size:0.68rem;background:var(--surface);border:1px solid var(--border2);border-radius:99px;padding:1px 7px;color:var(--muted)">Hook ${i+1}</span>
+          </div>
+          <button onclick="copyCapVar('${(h.hook||'').replace(/'/g,"&#39;")}')" style="background:var(--surface);border:1px solid var(--border2);border-radius:99px;padding:4px 12px;font-size:0.7rem;font-weight:600;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif">Copy</button>
+        </div>
+        <div style="font-size:0.88rem;font-weight:600;line-height:1.6;color:var(--text);margin-bottom:6px">"${h.hook||''}"</div>
+        <div style="font-size:0.75rem;color:var(--muted);line-height:1.5;font-style:italic">💡 ${h.why||''}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    const list = document.getElementById('hookList');
+    if (list) list.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--red);font-size:0.85rem">Gagal generate hooks. Coba lagi.</div>';
+  }
+}
+
+// ── CONTENT BRIEF ──
+function showContentBrief(item, dayNum, phase) {
+  if (!isPremium()) { showUpgradePrompt('Content Brief'); return; }
+  
+  const modal = document.createElement('div');
+  modal.id = 'briefModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:250;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);overflow-y:auto;padding:2rem 1rem;display:flex;align-items:flex-start;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:24px;padding:2rem;max-width:640px;width:100%;margin-top:2rem;border:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-family:'Sora',sans-serif;font-size:1rem;font-weight:700;color:var(--primary)">📋 Content Brief</div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:2px">H${dayNum} · ${item.platform} · ${item.type}</div>
+        </div>
+        <button onclick="document.getElementById('briefModal').remove()" style="background:var(--surface2);border:1px solid var(--border2);border-radius:99px;padding:6px 14px;font-size:0.78rem;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif">✕</button>
+      </div>
+      <div id="briefContent" style="display:flex;flex-direction:column;gap:12px">
+        <div style="text-align:center;padding:2rem;color:var(--muted)">
+          <div style="font-size:1.5rem;margin-bottom:8px">📋</div>
+          <div style="font-size:0.85rem">Menyusun brief lengkap...</div>
+        </div>
+      </div>
+      <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;gap:8px">
+        <button onclick="copyBrief()" style="flex:1;padding:10px;border-radius:99px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--muted);font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer">📋 Copy Brief</button>
+        <button onclick="document.getElementById('briefModal').remove()" style="flex:1;padding:10px;border-radius:99px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer">✓ Tutup</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  generateContentBrief(item, dayNum, phase);
+}
+
+async function generateContentBrief(item, dayNum, phase) {
+  try {
+    const prompt = `Kamu adalah content producer profesional.
+Buat content brief LENGKAP untuk:
+- Campaign: ${meta.title || ''} (${CATEGORIES[selectedCat]?.name || ''})
+- Hari: H${dayNum} | Fase: ${phase}
+- Platform: ${item.platform}
+- Format: ${item.type}
+- Judul: ${item.title}
+- Treatment: ${item.treatment}
+
+Jawab HANYA JSON:
+{
+  "objective": "Tujuan konten ini (1 kalimat)",
+  "format": "${item.type} untuk ${item.platform}",
+  "duration": "Durasi/ukuran (contoh: 15-30 detik, 1080x1080px, 5-7 slides)",
+  "hook": "Opening 3 detik pertama yang harus dilakukan",
+  "visual": "Deskripsi visual/estetik yang harus dibuat (warna, gaya, angle)",
+  "copy": "Copy/teks utama yang harus muncul di konten",
+  "cta": "Call to action yang spesifik",
+  "hashtags": ["#hashtag1","#hashtag2","#hashtag3","#hashtag4","#hashtag5"],
+  "deadline": "Waktu ideal post (contoh: Jam 19.00-21.00 WIB)",
+  "notes": "Catatan tambahan untuk tim desainer/editor"
+}
+JSON only.`;
+
+    const result = await callAPI(prompt, 'Menyusun brief...');
+    const clean = result.replace(/\`\`\`json|\`\`\`/g,'').trim();
+    const brief = JSON.parse(clean.match(/\{[\s\S]*\}/)?.[0] || clean);
+
+    const fields = [
+      { key:'objective', label:'🎯 Objektif', color:'var(--primary)' },
+      { key:'format',    label:'📐 Format & Ukuran', color:'var(--muted)' },
+      { key:'duration',  label:'⏱ Durasi', color:'var(--muted)' },
+      { key:'hook',      label:'⚡ Hook 3 Detik Pertama', color:'#ff7850' },
+      { key:'visual',    label:'🎨 Visual Direction', color:'#78a0ff' },
+      { key:'copy',      label:'✍️ Copy / Teks Utama', color:'var(--text)' },
+      { key:'cta',       label:'👆 Call to Action', color:'#4ec87a' },
+      { key:'deadline',  label:'🕐 Best Time to Post', color:'var(--muted)' },
+      { key:'notes',     label:'📝 Notes untuk Tim', color:'var(--muted)' },
+    ];
+
+    const hashtagHtml = Array.isArray(brief.hashtags)
+      ? brief.hashtags.map(h=>`<span style="background:var(--primary-soft);border:1px solid var(--primary-mid);color:var(--primary);padding:2px 8px;border-radius:99px;font-size:0.75rem;font-weight:600">${h}</span>`).join(' ')
+      : brief.hashtags || '';
+
+    const container = document.getElementById('briefContent');
+    if (!container) return;
+
+    // Store brief data for copy
+    window._currentBrief = brief;
+    window._currentBriefItem = item;
+
+    container.innerHTML = `
+      <div style="background:var(--primary-soft);border:1px solid var(--primary-mid);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:1.2rem">${item.type==='Video'?'🎬':item.type==='Reels'?'📱':item.type==='Carousel'?'🖼️':item.type==='Story'?'⭕':'📌'}</span>
+        <div>
+          <div style="font-weight:700;font-size:0.9rem">${item.title}</div>
+          <div style="font-size:0.75rem;color:var(--muted)">H${dayNum} · ${item.platform} · Fase ${phase}</div>
+        </div>
+      </div>
+      ${fields.map(f => brief[f.key] ? `
+        <div style="background:var(--surface2);border-radius:10px;padding:10px 14px;border:1px solid var(--border)">
+          <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:${f.color};margin-bottom:5px">${f.label}</div>
+          <div style="font-size:0.85rem;line-height:1.6;color:var(--text)">${brief[f.key]}</div>
+        </div>` : '').join('')}
+      <div style="background:var(--surface2);border-radius:10px;padding:10px 14px;border:1px solid var(--border)">
+        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--primary);margin-bottom:8px">🏷️ Hashtags</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">${hashtagHtml}</div>
+      </div>`;
+  } catch(e) {
+    const container = document.getElementById('briefContent');
+    if (container) container.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--red);font-size:0.85rem">Gagal generate brief. Coba lagi.</div>';
+  }
+}
+
+function copyBrief() {
+  const brief = window._currentBrief;
+  const item = window._currentBriefItem;
+  if (!brief) return;
+  const text = `📋 CONTENT BRIEF — ${item?.title || ''}
+Platform: ${item?.platform || ''} | Format: ${item?.type || ''}
+
+🎯 Objektif: ${brief.objective || ''}
+📐 Format: ${brief.format || ''}
+⏱ Durasi: ${brief.duration || ''}
+⚡ Hook: ${brief.hook || ''}
+🎨 Visual: ${brief.visual || ''}
+✍️ Copy: ${brief.copy || ''}
+👆 CTA: ${brief.cta || ''}
+🕐 Best Time: ${brief.deadline || ''}
+📝 Notes: ${brief.notes || ''}
+🏷️ Hashtags: ${Array.isArray(brief.hashtags) ? brief.hashtags.join(' ') : brief.hashtags || ''}`;
+  navigator.clipboard.writeText(text).then(() => showToastGlobal('Brief di-copy!'));
+}
+
+function showToastGlobal(msg) {
+  let toast = document.getElementById('globalToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'globalToast';
+    toast.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:var(--primary);color:var(--surface);padding:10px 18px;border-radius:10px;font-size:0.85rem;font-weight:700;z-index:999;font-family:Inter,sans-serif;display:none';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = '✓ ' + msg;
+  toast.style.display = 'block';
+  setTimeout(() => toast.style.display = 'none', 2000);
+}
+
+
+function copyCapVariation(idx) {
+  const caps = window._capVariations || [];
+  if (caps[idx]) navigator.clipboard.writeText(caps[idx].caption||'').then(() => showToastGlobal('Caption di-copy!'));
+}
+function copyHookItem(idx) {
+  const hooks = window._hookItems || [];
+  if (hooks[idx]) navigator.clipboard.writeText(hooks[idx].hook||'').then(() => showToastGlobal('Hook di-copy!'));
+}
 </script>
 
 <!-- SETTINGS MODAL -->
@@ -2750,7 +3253,7 @@ function updateNavUI() {
           <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span><strong>Export PDF & Print</strong></span></div>
           <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span><strong>Save History 6 campaign</strong></span></div>
         </div>
-        <a href="https://wa.me/6281234567890?text=Halo%2C+saya+mau+berlangganan+CampaignPlanner+Pro+Monthly+Rp+49.000%2Fbulan" target="_blank" style="display:block;width:100%;padding:13px;border-radius:99px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;text-align:center;text-decoration:none">Beli via WhatsApp →</a>
+        <a href="https://wa.me/6282351804949?text=Halo%2C+saya+mau+berlangganan+CampaignPlanner+Pro+Monthly+Rp+49.000%2Fbulan" target="_blank" style="display:block;width:100%;padding:13px;border-radius:99px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;text-align:center;text-decoration:none">Beli via WhatsApp →</a>
       </div>
 
       <!-- PRO ANNUAL -->
@@ -2768,7 +3271,7 @@ function updateNavUI() {
           <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Prioritas support</span></div>
           <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Early access fitur baru</span></div>
         </div>
-        <a href="https://wa.me/6281234567890?text=Halo%2C+saya+mau+berlangganan+CampaignPlanner+Pro+Annual+Rp+399.000%2Ftahun" target="_blank" style="display:block;width:100%;padding:13px;border-radius:99px;border:1.5px solid var(--primary);background:var(--primary-soft);color:var(--primary);font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;text-align:center;text-decoration:none">Beli via WhatsApp →</a>
+        <a href="https://wa.me/6282351804949?text=Halo%2C+saya+mau+berlangganan+CampaignPlanner+Pro+Annual+Rp+399.000%2Ftahun" target="_blank" style="display:block;width:100%;padding:13px;border-radius:99px;border:1.5px solid var(--primary);background:var(--primary-soft);color:var(--primary);font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;text-align:center;text-decoration:none">Beli via WhatsApp →</a>
       </div>
 
     </div>
@@ -2780,7 +3283,7 @@ function updateNavUI() {
         <div style="font-family:'Sora',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px">Rp 149.000<span style="font-size:1rem;font-weight:400;color:var(--muted)">/bulan</span></div>
         <p style="font-size:0.82rem;color:var(--muted)">Semua fitur Pro · 5 seat · Cocok untuk tim marketing & agency</p>
       </div>
-      <a href="https://wa.me/6281234567890?text=Halo%2C+saya+tertarik+paket+Agency+CampaignPlanner" target="_blank" style="padding:12px 24px;border-radius:99px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;white-space:nowrap">Hubungi Kami →</a>
+      <a href="https://wa.me/6282351804949?text=Halo%2C+saya+tertarik+paket+Agency+CampaignPlanner" target="_blank" style="padding:12px 24px;border-radius:99px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;white-space:nowrap">Hubungi Kami →</a>
     </div>
 
     <!-- FAQ -->
