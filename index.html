@@ -664,6 +664,106 @@ footer { background: var(--surface); border-top: 1px solid var(--border); paddin
 
 
 <script>
+// ── PROMO ASSETS PER CATEGORY ──
+const CATEGORY_ASSETS = {
+  film: [
+    { id:'bts_photo',   label:'📸 BTS Photo',         hint:'Foto di balik layar produksi' },
+    { id:'bts_video',   label:'🎬 BTS Video',          hint:'Video behind-the-scenes' },
+    { id:'stills',      label:'🖼️ Stills / Official Photo', hint:'Foto adegan resmi dari film' },
+    { id:'bloopers',    label:'😂 Bloopers',           hint:'Video NG / kesalahan lucu' },
+    { id:'trailer',     label:'🎞️ Trailer / Teaser',   hint:'Video trailer atau teaser resmi' },
+    { id:'poster',      label:'🎨 Poster / Key Art',   hint:'Poster resmi dan key visual' },
+    { id:'ost',         label:'🎵 OST / Soundtrack',   hint:'Music original score atau soundtrack' },
+    { id:'interview',   label:'🎤 Interview Cast',     hint:'Video/foto wawancara pemain & sutradara' },
+    { id:'presskit',    label:'📦 Press Kit',          hint:'Materi press resmi dari produser' },
+    { id:'premiere',    label:'🎪 Foto/Video Premiere', hint:'Dokumentasi acara premiere' },
+  ],
+  music: [
+    { id:'mv',          label:'🎬 Music Video',        hint:'Video klip resmi' },
+    { id:'lyric_video', label:'📝 Lyric Video',        hint:'Video dengan tampilan lirik' },
+    { id:'studio',      label:'🎙️ Studio Session',     hint:'Foto/video proses rekaman' },
+    { id:'live',        label:'🎤 Live Performance',   hint:'Footage konser atau penampilan live' },
+    { id:'bts_photo',   label:'📸 BTS Photo',         hint:'Foto di balik pembuatan album' },
+    { id:'album_art',   label:'🎨 Album / Cover Art',  hint:'Artwork album atau single' },
+    { id:'interview',   label:'🎙️ Interview Artist',   hint:'Wawancara tentang lagu/album' },
+    { id:'acoustic',    label:'🎸 Acoustic / Unplugged',hint:'Versi akustik atau stripped down' },
+  ],
+  brand: [
+    { id:'product_photo',label:'📸 Product Photo',     hint:'Foto produk resmi dari berbagai angle' },
+    { id:'product_video',label:'🎬 Product Video',     hint:'Video showcase atau demo produk' },
+    { id:'lifestyle',   label:'🌟 Lifestyle Photo',    hint:'Foto produk dalam konteks penggunaan' },
+    { id:'packaging',   label:'📦 Packaging / Unboxing',hint:'Foto atau video kemasan produk' },
+    { id:'testimonial', label:'⭐ Foto/Video Testimonial',hint:'Konten dari pelanggan nyata' },
+    { id:'infographic', label:'📊 Infografis',         hint:'Data atau fitur dalam bentuk visual' },
+    { id:'bts',         label:'🏭 BTS Produksi',       hint:'Proses pembuatan produk' },
+    { id:'comparison',  label:'⚖️ Before/After',       hint:'Perbandingan sebelum dan sesudah' },
+  ],
+  creator: [
+    { id:'selfie',      label:'🤳 Foto Personal',      hint:'Foto profesional atau casual creator' },
+    { id:'content_bts', label:'🎬 BTS Bikin Konten',   hint:'Proses pembuatan konten di balik layar' },
+    { id:'collab',      label:'🤝 Foto/Video Kolaborasi',hint:'Dokumentasi kolaborasi dengan brand/creator' },
+    { id:'portfolio',   label:'💼 Portfolio / Karya',  hint:'Showcase hasil kerja terbaik' },
+    { id:'testimonial', label:'⭐ Testimonial Klien',   hint:'Review dari brand atau audiens' },
+    { id:'lifestyle',   label:'🌟 Lifestyle Shot',     hint:'Foto keseharian yang relevan dengan niche' },
+  ],
+  food: [
+    { id:'food_photo',  label:'📸 Food Photography',   hint:'Foto makanan/minuman profesional' },
+    { id:'food_video',  label:'🎬 Video Masak',        hint:'Proses memasak atau plating' },
+    { id:'interior',    label:'🏠 Interior Resto',     hint:'Foto suasana dan dekorasi tempat' },
+    { id:'team',        label:'👨‍🍳 Foto Tim / Chef',    hint:'Foto chef dan tim dapur' },
+    { id:'customer',    label:'😊 Foto Pelanggan',     hint:'Dokumentasi pengunjung (dengan izin)' },
+    { id:'packaging',   label:'📦 Packaging Delivery', hint:'Foto kemasan untuk takeaway/delivery' },
+    { id:'menu',        label:'📋 Menu Visual',        hint:'Foto atau video tampilan menu' },
+    { id:'review',      label:'⭐ Screenshot Review',   hint:'Review positif dari Google/media sosial' },
+  ],
+  event: [
+    { id:'venue_photo', label:'📸 Foto Venue',         hint:'Foto lokasi dan dekorasi event' },
+    { id:'performer',   label:'🎤 Foto/Video Performer',hint:'Foto atau video artis/pembicara' },
+    { id:'rehearsal',   label:'🎭 Rehearsal / Gladi',  hint:'Dokumentasi persiapan dan gladi resik' },
+    { id:'teaser',      label:'🎞️ Teaser / Promo Video',hint:'Video promo event' },
+    { id:'poster',      label:'🎨 Poster / Flyer',     hint:'Materi visual promosi event' },
+    { id:'ticket',      label:'🎟️ Visual Tiket',       hint:'Tampilan desain tiket' },
+    { id:'past_event',  label:'📽️ Dokumentasi Event Lalu',hint:'Foto/video dari event sebelumnya' },
+    { id:'lineup',      label:'📋 Lineup Visual',      hint:'Grafis lineup artis/pembicara' },
+  ],
+  finance: [
+    { id:'app_screen',  label:'📱 Screenshot App',     hint:'Tampilan UI/UX produk digital' },
+    { id:'infographic', label:'📊 Infografis Data',    hint:'Data finansial dalam bentuk visual menarik' },
+    { id:'testimonial', label:'⭐ Testimonial User',   hint:'Cerita sukses pengguna nyata' },
+    { id:'team',        label:'👥 Foto Tim',           hint:'Foto tim dan kantor' },
+    { id:'award',       label:'🏆 Penghargaan',        hint:'Sertifikat, award, atau lisensi resmi' },
+    { id:'tutorial',    label:'📹 Video Tutorial',     hint:'Video cara penggunaan produk' },
+  ],
+  fashion: [
+    { id:'lookbook',    label:'📸 Lookbook Photo',     hint:'Foto editorial koleksi terbaru' },
+    { id:'detail_shot', label:'🔍 Detail / Close-up',  hint:'Foto detail kain, jahitan, aksesoris' },
+    { id:'model_video', label:'🎬 Video Model',        hint:'Video showcase koleksi di atas model' },
+    { id:'flat_lay',    label:'👗 Flat Lay',           hint:'Foto produk dari atas (overhead)' },
+    { id:'bts',         label:'🎭 BTS Pemotretan',     hint:'Behind the scenes foto shoot' },
+    { id:'lifestyle',   label:'🌟 Lifestyle Shot',     hint:'Foto produk dalam situasi nyata' },
+    { id:'packaging',   label:'📦 Packaging',          hint:'Foto kemasan dan unboxing' },
+    { id:'collab',      label:'🤝 Foto Kolaborasi',    hint:'Dokumentasi kolaborasi dengan talent' },
+  ],
+  gaming: [
+    { id:'gameplay',    label:'🎮 Gameplay Footage',   hint:'Video atau screenshot gameplay' },
+    { id:'trailer',     label:'🎞️ Trailer / Cinematic',hint:'Trailer resmi game atau event' },
+    { id:'fanart',      label:'🎨 Fan Art',            hint:'Karya seni dari komunitas' },
+    { id:'tournament',  label:'🏆 Foto/Video Turnamen',hint:'Dokumentasi kompetisi' },
+    { id:'streamer',    label:'📺 Footage Streamer',   hint:'Clip dari streamer yang memainkan game' },
+    { id:'merch',       label:'👕 Merchandise',        hint:'Foto merchandise resmi' },
+    { id:'patch_art',   label:'🖼️ Patch / Update Art', hint:'Visual art untuk update atau event in-game' },
+  ],
+  nonprofit: [
+    { id:'impact_photo',label:'❤️ Foto Impact Nyata',  hint:'Foto orang/komunitas yang terbantu' },
+    { id:'volunteer',   label:'🤝 Foto Volunteer',     hint:'Dokumentasi kegiatan relawan' },
+    { id:'infographic', label:'📊 Data & Infografis',  hint:'Statistik dampak dalam bentuk visual' },
+    { id:'testimony',   label:'🎤 Video Testimoni',    hint:'Cerita langsung dari penerima manfaat' },
+    { id:'event_doc',   label:'📸 Dokumentasi Kegiatan',hint:'Foto kegiatan lapangan' },
+    { id:'media',       label:'📰 Liputan Media',      hint:'Screenshot atau foto liputan berita' },
+  ],
+};
+
+
 // ── FREEMIUM & KEY SYSTEM ──
 const PREMIUM_KEY = 'cp_premium_key';
 const FREE_USAGE_KEY = 'cp_free_usage';
@@ -1349,6 +1449,15 @@ function renderForm(cat) {
       <p class="helper-text">💡 Klik untuk toggle platform yang aktif dikelola</p>
     </div>
 
+    <div class="form-section-title">📦 Aset Promosi Tersedia</div>
+    <div class="fg">
+      <label>Centang aset yang sudah kamu punya <span class="opt">(opsional — AI akan sesuaikan rekomendasi konten)</span></label>
+      <div id="assetsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:4px">
+        <!-- Injected per category -->
+      </div>
+      <p class="helper-text">💡 Semakin banyak aset yang tersedia, semakin variatif kalender konten yang dihasilkan</p>
+    </div>
+
     <div class="form-section-title">📝 Catatan Tambahan</div>
     <div class="fg">
       <label>Catatan Khusus <span class="opt">(opsional tapi powerful)</span></label>
@@ -1369,6 +1478,7 @@ Contoh:
   wireFormListeners();
   updateTimingUI();
   initPlatButtons();
+  renderAssetsGrid(cat);
   releaseType = cat.releaseTypes[0].val;
 }
 
@@ -1622,12 +1732,14 @@ async function generate() {
   const notesCtx = notes ? 'CATATAN KHUSUS (WAJIB DIIKUTI):\n'+notes+'\n' : '';
 
   const pillarCtx = getPillarContext();
+  const assetsCtx = getAssetsContext();
   const masterCtx = 'KATEGORI: '+cat.name+'.\n'
     +'TARGET AUDIENS: '+audienceCtx+'.\n'
     +'TONE OF VOICE: '+toneCtx+'.\n'
     +'BUDGET: '+budgetCtx+'.\n'
     +catCtx
     +(pillarCtx?'\n'+pillarCtx:'')
+    +(assetsCtx?'\n'+assetsCtx:'')
     +(notesCtx?'\n'+notesCtx:'');
 
   const shortDesc = desc.length > 180 ? desc.substring(0,180)+'...' : desc;
@@ -3163,6 +3275,58 @@ function copyCapVariation(idx) {
 function copyHookItem(idx) {
   const hooks = window._hookItems || [];
   if (hooks[idx]) navigator.clipboard.writeText(hooks[idx].hook||'').then(() => showToastGlobal('Hook di-copy!'));
+}
+
+
+// ── PROMO ASSETS SYSTEM ──
+function renderAssetsGrid(cat) {
+  const grid = document.getElementById('assetsGrid');
+  if (!grid) return;
+  const assets = CATEGORY_ASSETS[selectedCat] || [];
+  if (!assets.length) { grid.parentElement.parentElement.style.display = 'none'; return; }
+
+  grid.innerHTML = assets.map(a => `
+    <label style="display:flex;align-items:flex-start;gap:8px;padding:9px 12px;background:var(--surface2);border:1.5px solid var(--border2);border-radius:10px;cursor:pointer;transition:all 0.15s;user-select:none" 
+      onmouseover="this.style.borderColor='var(--primary)'" 
+      onmouseout="if(!this.querySelector('input').checked)this.style.borderColor='var(--border2)'">
+      <input type="checkbox" id="asset_${a.id}" value="${a.id}" 
+        style="width:15px;height:15px;accent-color:var(--primary);flex-shrink:0;margin-top:1px"
+        onchange="toggleAssetStyle(this)"/>
+      <div>
+        <div style="font-size:0.8rem;font-weight:600;color:var(--text);line-height:1.3">${a.label}</div>
+        <div style="font-size:0.68rem;color:var(--muted);margin-top:2px;line-height:1.3">${a.hint}</div>
+      </div>
+    </label>`
+  ).join('');
+}
+
+function toggleAssetStyle(checkbox) {
+  const label = checkbox.closest('label');
+  if (checkbox.checked) {
+    label.style.borderColor = 'var(--primary)';
+    label.style.background = 'var(--primary-soft)';
+  } else {
+    label.style.borderColor = 'var(--border2)';
+    label.style.background = 'var(--surface2)';
+  }
+}
+
+function getSelectedAssets() {
+  const checkboxes = document.querySelectorAll('#assetsGrid input[type="checkbox"]:checked');
+  const assets = CATEGORY_ASSETS[selectedCat] || [];
+  return Array.from(checkboxes).map(cb => {
+    const asset = assets.find(a => a.id === cb.value);
+    return asset ? asset.label.replace(/[^\w\s/]/gu, '').trim() : cb.value;
+  });
+}
+
+function getAssetsContext() {
+  const selected = getSelectedAssets();
+  if (!selected.length) return '';
+  return `ASET PROMOSI TERSEDIA: ${selected.join(', ')}. `
+    + `WAJIB: Prioritaskan penggunaan aset ini dalam konten. `
+    + `Jangan recommend konten yang butuh aset di luar list ini. `
+    + `Distribute penggunaan aset secara strategis — jangan pakai aset yang sama terus-menerus.`;
 }
 </script>
 
