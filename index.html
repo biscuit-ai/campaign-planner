@@ -637,12 +637,43 @@ const VALID_KEY_PREFIXES = ['CPP-', 'CPA-']; // Pro, Agency
 
 function isPremium() {
   const key = localStorage.getItem(PREMIUM_KEY);
-  return key && VALID_KEY_PREFIXES.some(p => key.startsWith(p)) && validateKeyFormat(key);
+  if (!key) return false;
+  if (!VALID_KEY_PREFIXES.some(p => key.startsWith(p))) return false;
+  if (!validateKeyFormat(key)) return false;
+  if (isKeyExpired(key)) return false; // Expired!
+  return true;
 }
 
 function validateKeyFormat(key) {
-  // Format: CPP-XXXX-XXXX-XXXX (16 chars after prefix)
-  return /^CP[PA]-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key);
+  // Format: CPP-XXXX-XXXX-MMYY (last segment is expiry month+year)
+  return /^CP[PA]-[A-Z0-9]{4}-[A-Z0-9]{4}-\d{4}$/.test(key);
+}
+
+function getKeyExpiry(key) {
+  const seg = key.split('-')[3]; // MMYY segment
+  if (!seg || !/^\d{4}$/.test(seg)) return null;
+  const month = parseInt(seg.slice(0,2)) - 1; // 0-indexed
+  const year = 2000 + parseInt(seg.slice(2));
+  // Last day of that month
+  return new Date(year, month + 1, 0);
+}
+
+function isKeyExpired(key) {
+  const expiry = getKeyExpiry(key);
+  if (!expiry) return false;
+  return expiry < new Date();
+}
+
+function getKeyExpiryLabel(key) {
+  const expiry = getKeyExpiry(key);
+  if (!expiry) return '';
+  return expiry.toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'});
+}
+
+function getDaysLeft(key) {
+  const expiry = getKeyExpiry(key);
+  if (!expiry) return -1;
+  return Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24));
 }
 
 function getUsageData(storageKey, windowMs) {
@@ -2496,14 +2527,28 @@ function updateSettingsUI() {
     if (premium) {
       statusEl.style.background = 'var(--primary-soft)';
       statusEl.style.borderColor = 'var(--primary-mid)';
+      const daysLeft = getDaysLeft(key);
+      const expiryLabel = getKeyExpiryLabel(key);
+      const isExpiringSoon = daysLeft >= 0 && daysLeft <= 7;
+      const isExpired = isKeyExpired(key);
+      statusEl.style.background = isExpired ? 'rgba(240,80,96,0.06)' : isExpiringSoon ? 'rgba(240,160,48,0.06)' : 'var(--primary-soft)';
+      statusEl.style.borderColor = isExpired ? 'rgba(240,80,96,0.2)' : isExpiringSoon ? 'rgba(240,160,48,0.2)' : 'var(--primary-mid)';
       statusEl.innerHTML = `
         <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:1.5rem">✨</span>
-          <div>
-            <div style="font-weight:700;color:var(--primary);font-size:0.9rem">Pro Plan Aktif</div>
-            <div style="font-size:0.75rem;color:var(--muted);margin-top:2px">Key: ${key.substring(0,8)}••••••••</div>
+          <span style="font-size:1.5rem">${isExpired ? '❌' : isExpiringSoon ? '⚠️' : '✨'}</span>
+          <div style="flex:1">
+            <div style="font-weight:700;color:${isExpired ? 'var(--red)' : isExpiringSoon ? '#f0a030' : 'var(--primary)'};font-size:0.9rem">
+              ${isExpired ? 'Key Expired' : 'Pro Plan Aktif'}
+            </div>
+            <div style="font-size:0.75rem;color:var(--muted);margin-top:2px">
+              ${isExpired 
+                ? 'Key kamu sudah expired. Renew untuk lanjut pakai Pro.'
+                : `Expired: ${expiryLabel} · ${daysLeft} hari lagi`}
+            </div>
           </div>
-        </div>`;
+          ${isExpired ? `<button onclick="hideSettings();showPricingPage()" style="padding:6px 12px;border-radius:99px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer">Renew →</button>` : ''}
+        </div>
+        ${isExpiringSoon && !isExpired ? `<div style="margin-top:8px;font-size:0.75rem;color:#f0a030">⚠️ Key akan expired ${daysLeft} hari lagi! <button onclick="hideSettings();showPricingPage()" style="background:none;border:none;color:var(--primary);font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.75rem;text-decoration:underline">Renew sekarang</button></div>` : ''}`;
     } else {
       statusEl.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
@@ -2592,14 +2637,27 @@ function deactivateKey() {
 
 function updateNavUI() {
   const premium = isPremium();
+  const key = localStorage.getItem(PREMIUM_KEY) || '';
   const upgradeBtn = document.getElementById('upgradeNavBtn');
   if (upgradeBtn) {
     if (premium) {
-      upgradeBtn.textContent = '✨ Pro';
+      const daysLeft = getDaysLeft(key);
+      const expiring = daysLeft >= 0 && daysLeft <= 7;
+      upgradeBtn.textContent = expiring ? `⚠️ Expired ${daysLeft}h` : '✨ Pro';
+      upgradeBtn.style.background = expiring ? '#f0a030' : 'var(--primary)';
       upgradeBtn.onclick = showSettings;
     } else {
-      upgradeBtn.textContent = '✨ Upgrade';
-      upgradeBtn.onclick = showPricingPage;
+      // Check if expired (not just not-premium)
+      const hasKey = key && VALID_KEY_PREFIXES.some(p => key.startsWith(p));
+      if (hasKey && isKeyExpired(key)) {
+        upgradeBtn.textContent = '❌ Key Expired';
+        upgradeBtn.style.background = 'var(--red)';
+        upgradeBtn.onclick = showPricingPage;
+      } else {
+        upgradeBtn.textContent = '✨ Upgrade';
+        upgradeBtn.style.background = 'var(--primary)';
+        upgradeBtn.onclick = showPricingPage;
+      }
     }
   }
 }
