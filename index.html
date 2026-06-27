@@ -588,6 +588,10 @@ footer {
       <label>Pemain Utama & Sutradara <span class="opt">(opsional)</span></label>
       <input type="text" id="movieCast" placeholder="Contoh: Abun Sungkar, Callista Arum · Sutradara: Edwin"/>
     </div>
+    <div class="fg">
+      <label>Tahun Rilis Film <span class="opt">(opsional — untuk deteksi film klasik di OTT)</span></label>
+      <input type="number" id="filmYear" placeholder="Contoh: 2011 (kosongkan jika film baru)" min="1950" max="2030"/>
+    </div>
 
     <div class="form-section-title">🎯 Tipe & Strategi Rilis</div>
 
@@ -775,17 +779,7 @@ Contoh:
       <button class="hist-close" id="closeHistory">✕ Tutup</button>
     </div>
     <div id="historyList"></div>
-  </div>
-</div>
 
-<!-- FOOTER -->
-<footer>
-  <div class="footer-logo">✦ CampaignPlanner</div>
-  <p class="footer-copy">Dibuat untuk industri film Indonesia &nbsp;·&nbsp; <a href="#app" style="color:var(--primary)">Buat kampanye baru</a></p>
-</footer>
-
-
-<script>
 
 const WORKER_URL = 'https://campaign-plannergr.emilkwikku001.workers.dev';
 
@@ -1042,6 +1036,7 @@ async function generate() {
   const genre    = document.getElementById('movieGenre').value;
   const date     = document.getElementById('releaseDate').value;
   const cast     = document.getElementById('movieCast').value.trim();
+  const filmYearInput = parseInt(document.getElementById('filmYear')?.value || '0');
   const notes    = document.getElementById('extraNotes').value.trim();
   const err      = document.getElementById('errMsg');
 
@@ -1100,8 +1095,10 @@ async function generate() {
   }[params.usp] || 'Konten film berkualitas';
 
   // Detect if film year suggests classic/catalog title
-  const filmYear = parseInt((meta.releaseFormatted || '').match(/\d{4}/)?.[0] || new Date().getFullYear());
-  const isClassicFilm = filmYear < new Date().getFullYear() - 1;
+  // Priority: explicit filmYear input > current year
+  const filmYear = filmYearInput > 1950 ? filmYearInput 
+    : parseInt((meta.releaseFormatted || '').match(/\d{4}/)?.[0] || new Date().getFullYear());
+  const isClassicFilm = isOTT && filmYear < new Date().getFullYear() - 1;
 
   const releaseCtx = isOTT
     ? isClassicFilm
@@ -1188,11 +1185,10 @@ async function generate() {
         return 'Sustenance';
       }
     }
-    // Before only — original logic
+    // Before only — last phase is Pre-Launch (not Launch, film hasn't released yet)
     if (d <= aw) return 'Awareness';
     if (d <= ex) return 'Excitement';
-    if (d <= pl) return 'Pre-Launch';
-    return 'Launch';
+    return 'Pre-Launch';
   }
 
   setProgress(5, 'Menyusun strategi...');
@@ -1714,318 +1710,243 @@ function exportHistoryPDF(id) {
 }
 
 // ─── EXPORT PDF (PREMIUM) ────────────────────────────────────────
+function stripEmoji(str) {
+  return (str||'').replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F1FF}\u{1F200}-\u{1F2FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}]/gu, '').replace(/\s+/g,' ').trim();
+}
+
 function exportPDF() {
   if (!plan || !window.jspdf) { printPlan(); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'mm', format:'a4' });
-  const pw = 210, ph = 297, ml = 16, mr = 16;
-  let y = 0;
+  const PW=210, PH=297, ML=14, MR=14, CW=PW-ML-MR;
+  let y=0;
 
-  // ── NORDIC LIGHT PALETTE ──
-  const FOREST  = [45, 75, 62];       // #2D4B3E
-  const CLAY    = [176, 125, 98];     // #B07D62
-  const WHITE   = [255, 255, 255];
-  const OFFWHT  = [247, 247, 245];    // #F7F7F5
-  const SURFACE = [240, 240, 238];    // #F0F0EE
-  const TEXT    = [44, 44, 43];       // #2C2C2B
-  const MUTED   = [107, 107, 103];    // #6B6B67
-  const OUTLINE = [209, 209, 205];    // #D1D1CD
+  const FOREST=[45,75,62], CLAY=[176,125,98], WHITE=[255,255,255];
+  const OFFWHT=[247,247,245], SURF=[240,240,238];
+  const TEXT=[44,44,43], MUTED=[107,107,103], OUTL=[209,209,205];
 
-  const phRGB = {
-    '1': [45,75,62],   '2': [176,125,98],
-    '3': [107,142,35], '4': [45,75,62],   '5': [176,125,98]
+  const phC={'1':[45,75,62],'2':[176,125,98],'3':[107,142,35],'4':[45,75,62],'5':[176,125,98]};
+  const phB={'1':[227,233,229],'2':[245,239,235],'3':[234,242,218],'4':[227,233,229],'5':[245,239,235]};
+  const platC={Instagram:[200,50,70],TikTok:[20,150,100],'X/Twitter':[50,90,180],YouTube:[200,40,40]};
+  const platB={Instagram:[250,230,232],TikTok:[225,245,238],'X/Twitter':[228,236,250],YouTube:[250,230,230]};
+
+  const newPage = () => {
+    doc.addPage();
+    doc.setFillColor(...OFFWHT); doc.rect(0,0,PW,PH,'F');
+    y = 14;
   };
-  const phBG = {
-    '1': [227,233,229], '2': [245,239,235],
-    '3': [234,242,218], '4': [227,233,229], '5': [245,239,235]
-  };
-  const platRGB = {
-    Instagram: [225,60,80],
-    TikTok:    [30,170,120],
-    'X/Twitter':[60,100,190],
-    YouTube:   [220,50,50]
-  };
-  const platBG = {
-    Instagram: [253,235,237],
-    TikTok:    [230,248,242],
-    'X/Twitter':[233,240,252],
-    YouTube:   [253,232,232]
-  };
+  const chk = (h) => { if (y+h > PH-14) newPage(); };
 
-  const chk = (n) => {
-    if (y + n > ph - 16) {
-      doc.addPage();
-      y = 16;
-      // Page bg
-      doc.setFillColor(...OFFWHT); doc.rect(0,0,pw,ph,'F');
-    }
-  };
-
-  function phaseClass(p) {
-    return p==='Awareness'?'1':p==='Excitement'?'2':p==='Engagement'?'3':p==='Pre-Launch'?'4':'5';
-  }
-
-  // ── COVER PAGE ──
-  doc.setFillColor(...OFFWHT); doc.rect(0,0,pw,ph,'F');
-
-  // Top bar
-  doc.setFillColor(...FOREST); doc.rect(0,0,pw,3,'F');
-
-  // Cover card
-  doc.setFillColor(...WHITE);
-  doc.roundedRect(ml, 16, pw-ml-mr, 72, 4, 4, 'F');
-  doc.setDrawColor(...OUTLINE); doc.setLineWidth(0.3);
-  doc.roundedRect(ml, 16, pw-ml-mr, 72, 4, 4, 'S');
-  doc.setLineWidth(0.2);
-
-  // Release type badge
-  const rtLabel = releaseType === 'ott' ? 'OTT / STREAMING' : 'BIOSKOP / THEATRICAL';
-  doc.setFillColor(...FOREST);
-  doc.roundedRect(ml+8, 23, 44, 6, 2, 2, 'F');
-  doc.setFontSize(6.5); doc.setFont('helvetica','bold'); doc.setTextColor(...WHITE);
-  doc.text(rtLabel, ml+30, 27.2, { align:'center' });
-
-  // Title
-  doc.setFontSize(20); doc.setFont('helvetica','bold'); doc.setTextColor(...TEXT);
-  const titleLines = doc.splitTextToSize(meta.title||'', pw-ml-mr-20);
-  doc.text(titleLines, ml+8, 38);
-  let ty = 38 + titleLines.length * 8;
-
-  // Subtitle
-  doc.setFontSize(9.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-  doc.text((meta.genre||'') + '  ·  Tayang ' + (meta.releaseFormatted||''), ml+8, ty+2);
-  if (meta.cast) { doc.text('Pemain: ' + meta.cast, ml+8, ty+8); }
-
-  y = 104;
-
-  // Stats row
-  const stats = [
-    { n: String((plan.days||[]).length*2), l:'Total Konten' },
-    { n: String((plan.overview?.platforms||[]).length), l:'Platform' },
-    { n: String((plan.phases||[]).length), l:'Fase' },
-    { n: String((plan.days||[]).length), l:'Hari' },
-  ];
-  const sw = (pw-ml-mr-9)/4;
-  stats.forEach((s,i) => {
-    const bx = ml + i*(sw+3);
-    doc.setFillColor(...WHITE); doc.roundedRect(bx,y,sw,20,3,3,'F');
-    doc.setDrawColor(...OUTLINE); doc.roundedRect(bx,y,sw,20,3,3,'S');
-    doc.setFontSize(s.n.length>4?8:14);
-    doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
-    doc.text(s.n, bx+sw/2, y+(s.n.length>4?9:12), {align:'center'});
-    doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-    doc.text(s.l, bx+sw/2, y+17, {align:'center'});
-  });
-  y += 30;
-
-  // Param tags
-  const ptags = [
-    params.audience !== 'general' ? params.audience : null,
-    params.tone     !== 'general' ? params.tone     : null,
-    params.mood     !== 'general' ? params.mood     : null,
-    params.budget   !== 'general' ? params.budget+' budget' : null,
-  ].filter(Boolean).map(t => t.toUpperCase());
-  if (ptags.length) {
-    let bx = ml;
-    ptags.forEach(tag => {
-      const w = doc.getStringUnitWidth(tag)*6.5/doc.internal.scaleFactor + 8;
-      doc.setFillColor(...SURFACE); doc.roundedRect(bx,y,w,6,2,2,'F');
-      doc.setDrawColor(...OUTLINE); doc.roundedRect(bx,y,w,6,2,2,'S');
-      doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
-      doc.text(tag, bx+w/2, y+4.2, {align:'center'});
-      bx += w+4;
-    });
-    y += 14;
-  }
-
-  // Notes block
-  if (meta.notes) {
-    doc.setFillColor(...WHITE); doc.roundedRect(ml,y,pw-ml-mr,14,3,3,'F');
-    doc.setDrawColor(...CLAY); doc.roundedRect(ml,y,pw-ml-mr,14,3,3,'S');
-    doc.setFontSize(6.5); doc.setFont('helvetica','bold'); doc.setTextColor(...CLAY);
-    doc.text('CATATAN TIM', ml+5, y+5);
-    doc.setFont('helvetica','normal'); doc.setTextColor(...TEXT);
-    const nl = doc.splitTextToSize(meta.notes, pw-ml-mr-10);
-    doc.text(nl.slice(0,2), ml+5, y+9.5);
-    y += 20;
-  }
-
-  // Generated
-  doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-  doc.text('Generated: '+new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}), ml, y);
-  y += 16;
-
-  // ── PAGE 2: PHASES + CALENDAR ──
-  doc.addPage();
-  doc.setFillColor(...OFFWHT); doc.rect(0,0,pw,ph,'F');
-  y = 16;
-
-  function sectionTitle(txt) {
+  const secTitle = (txt) => {
     chk(14);
-    doc.setFillColor(...FOREST); doc.rect(ml,y,3,8,'F');
+    doc.setFillColor(...FOREST); doc.rect(ML,y,3,8,'F');
     doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
-    doc.text(txt.toUpperCase(), ml+7, y+5.8);
-    doc.setDrawColor(...OUTLINE); doc.line(ml+7,y+8.5,pw-mr,y+8.5);
-    y += 15;
+    doc.text(stripEmoji(txt).toUpperCase(), ML+6, y+5.8);
+    doc.setDrawColor(...OUTL); doc.setLineWidth(0.2);
+    doc.line(ML+6,y+8.5,PW-MR,y+8.5);
+    y += 14;
+  };
+
+  // COVER
+  doc.setFillColor(...OFFWHT); doc.rect(0,0,PW,PH,'F');
+  doc.setFillColor(...FOREST); doc.rect(0,0,PW,3,'F');
+  doc.setFillColor(...WHITE);
+  doc.roundedRect(ML,8,CW,58,4,4,'F');
+  doc.setDrawColor(...OUTL); doc.setLineWidth(0.3);
+  doc.roundedRect(ML,8,CW,58,4,4,'S');
+
+  const badge = releaseType==='ott' ? 'OTT / STREAMING' : 'BIOSKOP / THEATRICAL';
+  doc.setFillColor(...FOREST); doc.roundedRect(ML+6,13,42,5.5,1.5,1.5,'F');
+  doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...WHITE);
+  doc.text(badge, ML+27, 17, {align:'center'});
+
+  doc.setFontSize(18); doc.setFont('helvetica','bold'); doc.setTextColor(...TEXT);
+  const tLines = doc.splitTextToSize(stripEmoji(meta.title||''), CW-16);
+  doc.text(tLines, ML+6, 27);
+  let ty = 27 + tLines.length*8;
+
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+  doc.text(stripEmoji((meta.genre||'') + '  ·  Tayang ' + (meta.releaseFormatted||'')), ML+6, ty+1);
+  if (meta.cast) {
+    const cl = doc.splitTextToSize(stripEmoji('Pemain: '+meta.cast), CW-16);
+    doc.text(cl, ML+6, ty+6);
   }
+
+  y = 76;
+  const stats=[
+    {n:String((plan.days||[]).length*2),l:'Total Konten'},
+    {n:String((plan.overview?.platforms||[]).length),l:'Platform'},
+    {n:String((plan.phases||[]).length),l:'Fase'},
+    {n:String((plan.days||[]).length),l:'Hari'},
+  ];
+  const sw=(CW-9)/4;
+  stats.forEach((s,i)=>{
+    const bx=ML+i*(sw+3);
+    doc.setFillColor(...WHITE); doc.roundedRect(bx,y,sw,18,2,2,'F');
+    doc.setDrawColor(...OUTL); doc.roundedRect(bx,y,sw,18,2,2,'S');
+    doc.setFontSize(s.n.length>4?7:13); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
+    doc.text(s.n, bx+sw/2, y+(s.n.length>4?8:11), {align:'center'});
+    doc.setFontSize(6); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+    doc.text(s.l, bx+sw/2, y+16, {align:'center'});
+  });
+  y += 26;
+
+  const ptags=[
+    params.budget!=='general'?params.budget.toUpperCase()+' BUDGET':null,
+    params.audience!=='general'?params.audience.toUpperCase():null,
+    params.tone!=='general'?params.tone.toUpperCase():null,
+  ].filter(Boolean);
+  if(ptags.length){
+    let bx=ML;
+    ptags.forEach(t=>{
+      const w=doc.getStringUnitWidth(t)*6/doc.internal.scaleFactor+8;
+      doc.setFillColor(...SURF); doc.roundedRect(bx,y,w,5.5,1.5,1.5,'F');
+      doc.setDrawColor(...OUTL); doc.roundedRect(bx,y,w,5.5,1.5,1.5,'S');
+      doc.setFontSize(5.5); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
+      doc.text(t, bx+w/2, y+3.8, {align:'center'});
+      bx+=w+3;
+    });
+    y+=12;
+  }
+
+  if(meta.notes){
+    chk(16);
+    doc.setFillColor(...WHITE); doc.roundedRect(ML,y,CW,12,2,2,'F');
+    doc.setDrawColor(...CLAY); doc.setLineWidth(0.3);
+    doc.roundedRect(ML,y,CW,12,2,2,'S');
+    doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...CLAY);
+    doc.text('CATATAN TIM', ML+5, y+4.5);
+    doc.setFont('helvetica','normal'); doc.setTextColor(...TEXT);
+    const nl=doc.splitTextToSize(stripEmoji(meta.notes), CW-10);
+    doc.text(nl.slice(0,2), ML+5, y+8.5);
+    y+=16;
+  }
+
+  doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+  doc.text('Generated: '+new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}), ML, y);
 
   // PHASES
-  sectionTitle('Fase Kampanye');
-  (plan.phases||[]).forEach(p => {
+  newPage();
+  secTitle('Fase Kampanye');
+  (plan.phases||[]).forEach(p=>{
     chk(14);
-    const k = p.type||'1';
-    const col = phRGB[k]||FOREST; const bg = phBG[k]||SURFACE;
-    doc.setFillColor(...bg); doc.roundedRect(ml,y,pw-ml-mr,11,2,2,'F');
-    doc.setFillColor(...col); doc.roundedRect(ml,y,30,11,2,2,'F');
-    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(...WHITE);
-    doc.text(p.name||'', ml+15, y+6.8, {align:'center'});
-    doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-    doc.text(p.period||'', ml+34, y+4);
+    const k=p.type||'1';
+    doc.setFillColor(...phB[k]||SURF); doc.roundedRect(ML,y,CW,10,2,2,'F');
+    doc.setFillColor(...phC[k]||FOREST); doc.roundedRect(ML,y,28,10,2,2,'F');
+    doc.setFontSize(6.5); doc.setFont('helvetica','bold'); doc.setTextColor(...WHITE);
+    doc.text(stripEmoji(p.name||''), ML+14, y+6.5, {align:'center'});
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+    doc.text(p.period||'', ML+32, y+4);
     doc.setTextColor(...TEXT);
-    const gl = doc.splitTextToSize(p.goal||'', pw-ml-mr-36);
-    doc.text(gl, ml+34, y+7.5);
-    y += Math.max(14, gl.length*3.8+6);
+    const gl=doc.splitTextToSize(stripEmoji(p.goal||''), CW-34);
+    doc.text(gl, ML+32, y+7.5);
+    y+=Math.max(13, gl.length*3.8+5);
   });
-  y += 4;
+  y+=4;
 
   // CALENDAR
-  sectionTitle('Kalender Harian');
-
-  // Table header
-  doc.setFillColor(...FOREST); doc.rect(ml,y,pw-ml-mr,8,'F');
-  doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(...WHITE);
-  const colW = [16,20,26,pw-ml-mr-62];
-  let cx = ml;
-  ['Hari','Tgl','Fase','Konten & Treatment & Caption'].forEach((h,i) => {
-    doc.text(h, cx+2, y+5.2); cx += colW[i];
+  secTitle('Kalender Harian');
+  doc.setFillColor(...FOREST); doc.rect(ML,y,CW,7,'F');
+  doc.setFontSize(6.5); doc.setFont('helvetica','bold'); doc.setTextColor(...WHITE);
+  let cx=ML;
+  [['Hari',14],['Tgl',18],['Fase',22],['Konten & Caption',CW-54]].forEach(([h,w])=>{
+    doc.text(h, cx+2, y+4.8); cx+=w;
   });
-  y += 8;
+  y+=7;
 
-  (plan.days||[]).forEach((d, ri) => {
-    const items = d.items||[];
-    // Pre-calc row height
-    let rowH = 4;
-    items.forEach(it => {
-      rowH += 7; // title + type/platform
-      const tr = doc.splitTextToSize((it.treatment||''), colW[3]-4);
-      rowH += tr.length*3.5 + 2;
-      if (it.caption) {
-        const cl = doc.splitTextToSize((it.caption||''), colW[3]-6);
-        rowH += cl.length*3.2 + 8;
-      }
+  (plan.days||[]).forEach((d,ri)=>{
+    const items=d.items||[];
+    let rowH=4;
+    items.forEach(it=>{
+      rowH+=6;
+      rowH+=doc.splitTextToSize(stripEmoji(it.treatment||''), CW-58).length*3.3+1;
+      if(it.caption) rowH+=doc.splitTextToSize(stripEmoji(it.caption||''), CW-58).length*3+7;
+      rowH+=3;
     });
-    rowH = Math.max(rowH, 16);
+    rowH=Math.max(rowH,14);
     chk(rowH+2);
 
-    // Row bg
-    doc.setFillColor(ri%2===0 ? 255:250, ri%2===0 ? 255:250, ri%2===0 ? 255:250);
-    if (ri%2!==0) doc.setFillColor(...SURFACE);
-    doc.rect(ml,y,pw-ml-mr,rowH,'F');
-    doc.setDrawColor(...OUTLINE); doc.line(ml,y+rowH,pw-mr,y+rowH);
+    doc.setFillColor(...(ri%2===0?WHITE:SURF));
+    doc.rect(ML,y,CW,rowH,'F');
+    doc.setDrawColor(...OUTL); doc.setLineWidth(0.15);
+    doc.line(ML,y+rowH,ML+CW,y+rowH);
 
-    cx = ml;
-    // Day
-    doc.setFontSize(8.5); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
-    doc.text('H'+(d.day||''), cx+2, y+7); cx += colW[0];
-    // Date
-    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-    doc.text(d.date||'', cx+2, y+7); cx += colW[1];
-    // Phase badge
-    const pk = phaseClass(d.phase||''); 
-    const pc = phRGB[pk]||FOREST; const pb = phBG[pk]||SURFACE;
-    doc.setFillColor(...pb); doc.roundedRect(cx+1,y+2,colW[2]-3,6,2,2,'F');
-    doc.setFontSize(6.5); doc.setFont('helvetica','bold'); doc.setTextColor(...pc);
-    doc.text((d.phase||'').substring(0,10), cx+colW[2]/2, y+5.8, {align:'center'});
-    cx += colW[2];
+    cx=ML;
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
+    doc.text('H'+(d.day||''), cx+2, y+7); cx+=14;
+    doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+    doc.text(d.date||'', cx+1, y+7); cx+=18;
+    const pk=d.phase==='Awareness'?'1':d.phase==='Excitement'?'2':d.phase==='Pre-Launch'?'3':d.phase==='Launch'?'4':'5';
+    doc.setFillColor(...phB[pk]||SURF); doc.roundedRect(cx+1,y+2,20,5,1.5,1.5,'F');
+    doc.setFontSize(5.5); doc.setFont('helvetica','bold'); doc.setTextColor(...phC[pk]||FOREST);
+    doc.text(stripEmoji(d.phase||'').substring(0,10), cx+11, y+5.6, {align:'center'}); cx+=22;
 
-    // Items
-    let itemY = y+3;
-    const contentX = cx+2;
-    const contentW = colW[3]-4;
-
-    items.forEach((it,ii) => {
-      if (ii>0) { itemY += 4; }
-      // Type + platform badges
-      const platC = platRGB[it.platform]||FOREST;
-      const platB = platBG[it.platform]||SURFACE;
-      doc.setFillColor(...SURFACE); doc.roundedRect(contentX, itemY, 20, 4.5, 1.5, 1.5, 'F');
-      doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
-      doc.text((it.type||'').substring(0,8), contentX+10, itemY+3.2, {align:'center'});
-      doc.setFillColor(...platB); doc.roundedRect(contentX+22, itemY, 22, 4.5, 1.5, 1.5, 'F');
-      doc.setTextColor(...platC);
-      doc.text(it.platform||'', contentX+33, itemY+3.2, {align:'center'});
-      itemY += 6;
-
-      // Title
-      doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(...TEXT);
-      doc.text(it.title||'', contentX, itemY);
-      itemY += 4;
-
-      // Treatment
-      doc.setFontSize(6.8); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-      const tr = doc.splitTextToSize(it.treatment||'', contentW);
-      doc.text(tr, contentX, itemY);
-      itemY += tr.length*3.5 + 1;
-
-      // Caption block
-      if (it.caption) {
-        const cl = doc.splitTextToSize(it.caption||'', contentW-4);
-        const capH = cl.length*3.2 + 7;
-        doc.setFillColor(227,233,229); // forest soft
-        doc.roundedRect(contentX, itemY, contentW, capH, 2, 2, 'F');
-        doc.setFillColor(...FOREST); doc.rect(contentX, itemY, 2, capH, 'F');
-        doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
-        doc.text('✍ CAPTION', contentX+4, itemY+4);
-        doc.setFont('helvetica','normal'); doc.setTextColor(...TEXT);
-        doc.setFontSize(6.5);
-        // Strip emoji for PDF rendering
-        const cleanCap = (it.caption||'').replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, '').replace(/\s+/g,' ').trim();
-        const clClean = doc.splitTextToSize(cleanCap, contentW-4);
-        doc.text(clClean, contentX+4, itemY+8);
-        itemY += capH + 2;
+    let iy=y+3;
+    const ix=cx+2, iw=CW-54;
+    items.forEach((it,ii)=>{
+      if(ii>0) iy+=3;
+      doc.setFillColor(...SURF); doc.roundedRect(ix,iy,16,4,1,1,'F');
+      doc.setFontSize(5.5); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
+      doc.text(stripEmoji(it.type||'').substring(0,7), ix+8, iy+2.9, {align:'center'});
+      const ptc=platC[it.platform]||FOREST, ptb=platB[it.platform]||SURF;
+      doc.setFillColor(...ptb); doc.roundedRect(ix+18,iy,18,4,1,1,'F');
+      doc.setFontSize(5.5); doc.setTextColor(...ptc);
+      doc.text(stripEmoji(it.platform||''), ix+27, iy+2.9, {align:'center'});
+      iy+=5;
+      doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(...TEXT);
+      const tl=doc.splitTextToSize(stripEmoji(it.title||''), iw);
+      doc.text(tl, ix, iy); iy+=tl.length*3.5;
+      doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+      const tr=doc.splitTextToSize(stripEmoji(it.treatment||''), iw);
+      doc.text(tr, ix, iy); iy+=tr.length*3.3+1;
+      if(it.caption){
+        const cl=doc.splitTextToSize(stripEmoji(it.caption||''), iw-4);
+        const ch=cl.length*3+6;
+        doc.setFillColor(227,233,229); doc.roundedRect(ix,iy,iw,ch,1.5,1.5,'F');
+        doc.setFillColor(...FOREST); doc.rect(ix,iy,1.5,ch,'F');
+        doc.setFontSize(5.5); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
+        doc.text('CAPTION', ix+4, iy+3.5);
+        doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...TEXT);
+        doc.text(cl, ix+4, iy+7);
+        iy+=ch+2;
       }
     });
-
-    y += rowH;
+    y+=rowH;
   });
 
-  // ── TIPS ──
-  doc.addPage();
-  doc.setFillColor(...OFFWHT); doc.rect(0,0,pw,ph,'F');
-  y = 16;
-  sectionTitle('Tips Kampanye ' + (releaseType === 'ott' ? 'OTT' : 'Bioskop'));
-  (plan.tipsBoxOffice||[]).forEach((t,ti) => {
-    chk(16);
-    const nums = ['01','02','03','04','05'];
-    doc.setFillColor(...WHITE); doc.roundedRect(ml,y,pw-ml-mr,13,2,2,'F');
-    doc.setDrawColor(...OUTLINE); doc.roundedRect(ml,y,pw-ml-mr,13,2,2,'S');
-    // Number badge instead of emoji
-    doc.setFillColor(...FOREST); doc.roundedRect(ml+3,y+3,8,7,1,1,'F');
+  // TIPS
+  newPage();
+  secTitle('Tips Kampanye '+(releaseType==='ott'?'OTT':'Bioskop'));
+  (plan.tipsBoxOffice||[]).forEach((t,ti)=>{
+    chk(18);
+    doc.setFillColor(...WHITE); doc.roundedRect(ML,y,CW,14,2,2,'F');
+    doc.setDrawColor(...OUTL); doc.roundedRect(ML,y,CW,14,2,2,'S');
+    doc.setFillColor(...FOREST); doc.roundedRect(ML+3,y+3.5,8,7,1.5,1.5,'F');
     doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...WHITE);
-    doc.text(nums[ti]||'0'+(ti+1), ml+7, y+7.5, {align:'center'});
+    doc.text('0'+(ti+1), ML+7, y+8.2, {align:'center'});
     doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(...FOREST);
-    doc.text(t.title||'', ml+14, y+5.5);
-    doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-    const dl = doc.splitTextToSize(t.desc||'', pw-ml-mr-16);
-    doc.text(dl, ml+14, y+9.5);
-    y += Math.max(16, dl.length*3.8+8);
+    doc.text(stripEmoji(t.title||''), ML+14, y+6);
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+    const dl=doc.splitTextToSize(stripEmoji(t.desc||''), CW-16);
+    doc.text(dl, ML+14, y+10);
+    y+=Math.max(17, dl.length*3.5+10);
   });
 
-  // ── FOOTER all pages ──
-  const total = doc.internal.getNumberOfPages();
-  for (let pg=1;pg<=total;pg++) {
+  // FOOTER
+  const total=doc.internal.getNumberOfPages();
+  for(let pg=1;pg<=total;pg++){
     doc.setPage(pg);
-    doc.setFillColor(...WHITE); doc.rect(0,ph-10,pw,10,'F');
-    doc.setDrawColor(...OUTLINE); doc.line(0,ph-10,pw,ph-10);
-    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
-    doc.text((meta.title||'')+' — Campaign Plan', ml, ph-4);
-    doc.text(pg+' / '+total, pw-mr, ph-4, {align:'right'});
+    doc.setFillColor(...WHITE); doc.rect(0,PH-9,PW,9,'F');
+    doc.setDrawColor(...OUTL); doc.setLineWidth(0.2);
+    doc.line(0,PH-9,PW,PH-9);
+    doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+    doc.text(stripEmoji(meta.title||'')+' — Campaign Plan', ML, PH-3.5);
+    doc.text(pg+' / '+total, PW-MR, PH-3.5, {align:'right'});
   }
 
-  doc.save('campaign-'+(meta.title||'film').replace(/[^a-zA-Z0-9]/g,'-').toLowerCase()+'.pdf');
+  doc.save('campaign-'+stripEmoji(meta.title||'film').replace(/[^a-zA-Z0-9]/g,'-').toLowerCase()+'.pdf');
 }
 
-// Init event listeners
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('genBtn').addEventListener('click', generate);
   // Timing buttons
