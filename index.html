@@ -497,6 +497,8 @@ footer { background: var(--surface); border-top: 1px solid var(--border); paddin
   <a class="nav-logo" href="#">✦ CampaignPlanner</a>
   <div class="nav-right">
     <button class="nav-hist-btn" id="navHistBtn" style="display:none" onclick="showHistory()">📚 <span id="navHistCount">0</span> Tersimpan</button>
+    <button onclick="showPricingPage()" style="padding:6px 14px;border-radius:var(--radius-pill);background:var(--primary);border:none;color:var(--surface);font-size:0.78rem;font-weight:700;cursor:pointer;font-family:Inter,sans-serif" id="upgradeNavBtn">✨ Upgrade</button>
+    <button onclick="showSettings()" style="width:36px;height:36px;border-radius:var(--radius-pill);background:var(--surface2);border:1px solid var(--border2);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center" title="Settings">⚙️</button>
     <button class="theme-toggle" id="themeToggle" title="Toggle theme">☀️</button>
   </div>
 </nav>
@@ -621,6 +623,207 @@ footer { background: var(--surface); border-top: 1px solid var(--border); paddin
 
 
 <script>
+// ── FREEMIUM & KEY SYSTEM ──
+const PREMIUM_KEY = 'cp_premium_key';
+const FREE_USAGE_KEY = 'cp_free_usage';
+const PRO_SESSION_KEY = 'cp_pro_session';
+const FREE_LIMIT = 2;       // 2x per day
+const PRO_LIMIT = 10;       // 10x per 3 hours
+const PRO_WINDOW = 3 * 60 * 60 * 1000; // 3 hours in ms
+const FREE_WINDOW = 24 * 60 * 60 * 1000; // 24 hours in ms
+
+// Valid key prefixes (you can change these)
+const VALID_KEY_PREFIXES = ['CPP-', 'CPA-']; // Pro, Agency
+
+function isPremium() {
+  const key = localStorage.getItem(PREMIUM_KEY);
+  return key && VALID_KEY_PREFIXES.some(p => key.startsWith(p)) && validateKeyFormat(key);
+}
+
+function validateKeyFormat(key) {
+  // Format: CPP-XXXX-XXXX-XXXX (16 chars after prefix)
+  return /^CP[PA]-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key);
+}
+
+function getUsageData(storageKey, windowMs) {
+  try {
+    const data = JSON.parse(localStorage.getItem(storageKey) || '{"count":0,"windowStart":0}');
+    const now = Date.now();
+    if (now - data.windowStart > windowMs) {
+      return { count: 0, windowStart: now };
+    }
+    return data;
+  } catch(e) { return { count: 0, windowStart: Date.now() }; }
+}
+
+function saveUsageData(storageKey, data) {
+  localStorage.setItem(storageKey, JSON.stringify(data));
+}
+
+function checkAndIncrementUsage() {
+  const premium = isPremium();
+  const storageKey = premium ? PRO_SESSION_KEY : FREE_USAGE_KEY;
+  const windowMs = premium ? PRO_WINDOW : FREE_WINDOW;
+  const limit = premium ? PRO_LIMIT : FREE_LIMIT;
+
+  const usage = getUsageData(storageKey, windowMs);
+
+  if (usage.count >= limit) {
+    const resetAt = usage.windowStart + windowMs;
+    const remaining = resetAt - Date.now();
+    const hours = Math.floor(remaining / 3600000);
+    const mins = Math.floor((remaining % 3600000) / 60000);
+    showLimitModal(premium, hours, mins, limit);
+    return false;
+  }
+
+  usage.count++;
+  if (!usage.windowStart) usage.windowStart = Date.now();
+  saveUsageData(storageKey, usage);
+  return true;
+}
+
+function getRemainingGenerates() {
+  const premium = isPremium();
+  const storageKey = premium ? PRO_SESSION_KEY : FREE_USAGE_KEY;
+  const windowMs = premium ? PRO_WINDOW : FREE_WINDOW;
+  const limit = premium ? PRO_LIMIT : FREE_LIMIT;
+  const usage = getUsageData(storageKey, windowMs);
+  return Math.max(0, limit - usage.count);
+}
+
+function showLimitModal(isPro, hours, mins, limit) {
+  const timeStr = hours > 0 ? `${hours} jam ${mins} menit` : `${mins} menit`;
+  const modal = document.createElement('div');
+  modal.id = 'limitModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:1.5rem';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:24px;padding:2.5rem;max-width:420px;width:100%;text-align:center;border:1px solid var(--border);box-shadow:var(--shadow-lg)">
+      <div style="font-size:2.5rem;margin-bottom:1rem">${isPro ? '⏳' : '🚀'}</div>
+      <h3 style="font-family:'Sora',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:8px">
+        ${isPro ? 'Limit Sesi Tercapai' : 'Limit Harian Tercapai'}
+      </h3>
+      <p style="font-size:0.875rem;color:var(--muted);margin-bottom:1.5rem;line-height:1.6">
+        ${isPro 
+          ? `Kamu sudah generate <strong>${limit}x</strong> dalam sesi ini. Reset dalam <strong style="color:var(--primary)">${timeStr}</strong>.`
+          : `Kamu sudah menggunakan <strong>${limit}x</strong> generate hari ini. Reset dalam <strong style="color:var(--primary)">${timeStr}</strong>.`
+        }
+      </p>
+      ${!isPro ? `
+      <div style="background:var(--primary-soft);border:1px solid var(--primary-mid);border-radius:12px;padding:1rem;margin-bottom:1.5rem">
+        <div style="font-size:0.78rem;font-weight:700;color:var(--primary);margin-bottom:4px">✨ Upgrade ke Pro</div>
+        <div style="font-size:0.82rem;color:var(--muted)">10x generate per sesi · Semua fitur unlock · Mulai Rp 49.000/bulan</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('limitModal').remove()" style="flex:1;padding:10px;border-radius:99px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--muted);font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer">Tutup</button>
+        <button onclick="document.getElementById('limitModal').remove();showPricingPage()" style="flex:2;padding:10px;border-radius:99px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer">Lihat Paket Pro →</button>
+      </div>
+      ` : `
+      <button onclick="document.getElementById('limitModal').remove()" style="padding:10px 28px;border-radius:99px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer">OK, Nanti Coba Lagi</button>
+      `}
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+// ── FREEMIUM RESTRICTIONS ──
+const FREE_CATEGORIES = ['film', 'brand']; // Only 2 categories for free
+const FREE_MAX_DUR = 1; // Max 1 week for free
+const FREE_PLATFORMS = ['Instagram', 'TikTok']; // Only 2 platforms for free
+
+function applyFreemiumUI() {
+  if (isPremium()) return;
+
+  // Lock categories
+  document.querySelectorAll('.cat-card').forEach(card => {
+    const cat = card.dataset.cat;
+    if (!FREE_CATEGORIES.includes(cat)) {
+      card.style.position = 'relative';
+      card.style.opacity = '0.6';
+      // Add lock badge
+      if (!card.querySelector('.lock-badge')) {
+        const badge = document.createElement('div');
+        badge.className = 'lock-badge';
+        badge.innerHTML = '🔒 Pro';
+        badge.style.cssText = 'position:absolute;top:8px;right:8px;background:var(--primary);color:var(--surface);font-size:0.62rem;font-weight:700;padding:2px 7px;border-radius:99px;pointer-events:none';
+        card.appendChild(badge);
+        card.onclick = (e) => { e.stopPropagation(); showUpgradePrompt('kategori ini'); };
+      }
+    }
+  });
+}
+
+function applyFormFreemiumRestrictions() {
+  if (isPremium()) return;
+
+  // Lock duration > 1 week
+  document.querySelectorAll('.dur-btn').forEach(btn => {
+    if (parseInt(btn.dataset.val) > FREE_MAX_DUR) {
+      btn.style.opacity = '0.4';
+      btn.style.cursor = 'not-allowed';
+      btn.title = 'Upgrade ke Pro untuk durasi lebih panjang';
+      btn.onclick = (e) => { e.preventDefault(); showUpgradePrompt('durasi lebih dari 1 minggu'); };
+    }
+  });
+
+  // Lock budget options except general
+  document.querySelectorAll('.budget-pill').forEach(btn => {
+    if (btn.dataset.val !== 'general') {
+      btn.style.opacity = '0.4';
+      btn.style.cursor = 'not-allowed';
+      btn.title = 'Upgrade ke Pro';
+      btn.onclick = (e) => { e.preventDefault(); showUpgradePrompt('pilihan budget'); };
+    }
+  });
+
+  // Lock platforms except Instagram & TikTok
+  ['plat-x','plat-yt'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.style.opacity = '0.4';
+      btn.style.cursor = 'not-allowed';
+      btn.title = 'Upgrade ke Pro';
+      btn.classList.remove('active');
+      btn.onclick = (e) => { e.preventDefault(); showUpgradePrompt('platform X/Twitter dan YouTube'); };
+    }
+  });
+
+  // Add upgrade banner to form
+  const genBtn = document.getElementById('genBtn');
+  if (genBtn && !document.getElementById('freeBanner')) {
+    const banner = document.createElement('div');
+    banner.id = 'freeBanner';
+    banner.style.cssText = 'background:var(--primary-soft);border:1px solid var(--primary-mid);border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap';
+    const remaining = getRemainingGenerates();
+    banner.innerHTML = `
+      <div style="font-size:0.8rem;color:var(--muted)">
+        <span style="color:var(--primary);font-weight:700">Free Plan</span> · 
+        <span id="remainingCount">${remaining}</span>x generate tersisa hari ini · 
+        <span style="font-size:0.72rem">Durasi 1 minggu · 2 platform · Budget general</span>
+      </div>
+      <button onclick="showPricingPage()" style="padding:5px 14px;border-radius:99px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap">Upgrade Pro ✨</button>`;
+    genBtn.parentElement.insertBefore(banner, genBtn);
+  }
+}
+
+function showUpgradePrompt(feature) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:1.5rem';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:24px;padding:2rem;max-width:380px;width:100%;text-align:center;border:1px solid var(--border)">
+      <div style="font-size:2rem;margin-bottom:12px">🔒</div>
+      <h3 style="font-family:'Sora',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:8px">Fitur Pro</h3>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1.5rem;line-height:1.6">
+        Akses <strong>${feature}</strong> tersedia di paket Pro. Mulai dari <strong style="color:var(--primary)">Rp 49.000/bulan</strong>.
+      </p>
+      <div style="display:flex;gap:8px">
+        <button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:10px;border-radius:99px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--muted);font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer">Nanti</button>
+        <button onclick="this.closest('[style*=fixed]').remove();showPricingPage()" style="flex:2;padding:10px;border-radius:99px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer">Lihat Paket →</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+
 
 const WORKER_URL = 'https://campaign-plannergr.emilkwikku001.workers.dev';
 
@@ -1107,6 +1310,7 @@ function changeCategory() {
 }
 
 function wireFormListeners() {
+  applyFormFreemiumRestrictions();
   const genBtn = document.getElementById('genBtn');
   if (genBtn) genBtn.addEventListener('click', generate);
 
@@ -1265,6 +1469,9 @@ function setProgress(pct, label) {
 
 // ── GENERATE ──
 async function generate() {
+  // ── FREEMIUM GATE ──
+  if (!checkAndIncrementUsage()) return;
+  
   const cat = CATEGORIES[selectedCat];
   if (!cat) return;
 
@@ -1762,6 +1969,7 @@ const HISTORY_KEY = 'cp_history_v2';
 const MAX_HISTORY = 6;
 
 function saveToHistory() {
+  if (!isPremium()) { showUpgradePrompt('menyimpan history'); return; }
   if (!plan || !meta) return;
   const btn = document.getElementById('btnSave');
   const entry = {
@@ -1881,6 +2089,7 @@ function stripEmoji(str) {
 
 // ── PRINT ──
 function printPlan() {
+  if (!isPremium()) { showUpgradePrompt('fitur Print'); return; }
   if (!plan) return;
   const cat = CATEGORIES[selectedCat]||{};
   const se = stripEmoji;
@@ -1948,7 +2157,164 @@ function printPlan() {
       <div class="sec"><div class="sec-title">Tips Kampanye ${se(cat.name||'')}</div><div class="tips-grid">${tips}</div></div>
     </div>
     <div class="ftr"><span>${se(meta.title||'')} — Campaign Plan</span><span>${new Date().toLocaleDateString('id-ID')}</span></div>
-    <scr`+`ipt>window.onload=()=>window.print()<\/scr`+`ipt></body></html>`;
+    <scr`+`ipt>window.onload=()=>window.print()<\/scr`+`ipt>
+<!-- SETTINGS MODAL -->
+<div id="settingsModal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);overflow-y:auto;padding:2rem 1rem">
+  <div style="max-width:480px;margin:0 auto;background:var(--surface);border-radius:24px;padding:2rem;box-shadow:var(--shadow-lg)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-family:'Sora',sans-serif;font-size:1.15rem;font-weight:700;color:var(--primary)">⚙️ Settings</div>
+        <p style="font-size:0.78rem;color:var(--muted);margin-top:2px">Kelola akun dan lisensi kamu</p>
+      </div>
+      <button onclick="hideSettings()" style="background:var(--surface2);border:1px solid var(--border2);border-radius:99px;padding:7px 16px;font-size:0.82rem;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif">✕</button>
+    </div>
+
+    <!-- Current Status -->
+    <div id="planStatus" style="margin-bottom:1.5rem;padding:1rem;border-radius:12px;border:1px solid var(--border)">
+      <!-- Filled by JS -->
+    </div>
+
+    <!-- Key Input -->
+    <div style="margin-bottom:1.5rem">
+      <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:block;margin-bottom:8px">Masukkan License Key</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="keyInput" placeholder="CPP-XXXX-XXXX-XXXX" style="flex:1;background:var(--surface2);border:1.5px solid var(--border2);border-radius:12px;padding:11px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.9rem;text-transform:uppercase;letter-spacing:.05em"/>
+        <button onclick="activateKey()" style="padding:11px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer;white-space:nowrap">Aktifkan</button>
+      </div>
+      <p id="keyMsg" style="font-size:0.78rem;margin-top:6px;display:none"></p>
+      <p style="font-size:0.72rem;color:var(--muted);margin-top:6px">Sudah punya key? Masukkan di atas. Belum punya? <button onclick="hideSettings();showPricingPage()" style="background:none;border:none;color:var(--primary);font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.72rem">Beli sekarang →</button></p>
+    </div>
+
+    <!-- Usage Stats -->
+    <div id="usageStats" style="background:var(--surface2);border-radius:12px;padding:1rem;margin-bottom:1.5rem;border:1px solid var(--border)">
+      <!-- Filled by JS -->
+    </div>
+
+    <!-- Deactivate -->
+    <div id="deactivateSection" style="display:none">
+      <button onclick="deactivateKey()" style="width:100%;padding:10px;border-radius:99px;border:1.5px solid rgba(186,26,26,0.3);background:rgba(186,26,26,0.06);color:var(--red);font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer">🗑 Hapus License Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRICING PAGE -->
+<div id="pricingPage" style="display:none;position:fixed;inset:0;z-index:200;background:var(--bg);overflow-y:auto">
+  <div style="max-width:860px;margin:0 auto;padding:5rem 1.5rem">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:3rem">
+      <button onclick="hidePricingPage()" style="position:fixed;top:1rem;right:1.5rem;background:var(--surface2);border:1px solid var(--border2);border-radius:99px;padding:8px 18px;font-size:0.82rem;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;z-index:10">✕ Tutup</button>
+      <div style="font-size:0.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--primary);margin-bottom:8px">Pricing</div>
+      <h2 style="font-family:'Sora',sans-serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;letter-spacing:-0.03em;margin-bottom:1rem">Pilih paket yang sesuai</h2>
+      <p style="font-size:1rem;color:var(--muted);max-width:460px;margin:0 auto;line-height:1.7">Mulai gratis, upgrade kapan saja. Tidak perlu kartu kredit.</p>
+    </div>
+
+    <!-- Plans Grid -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;margin-bottom:3rem">
+      
+      <!-- FREE -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:2rem">
+        <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Free</div>
+        <div style="font-family:'Sora',sans-serif;font-size:2.2rem;font-weight:800;color:var(--text);margin-bottom:4px">Rp 0</div>
+        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:1.5rem">Selamanya gratis</div>
+        <div style="height:1px;background:var(--border);margin-bottom:1.5rem"></div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:2rem;font-size:0.85rem">
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>2x generate per hari</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Durasi max 1 minggu</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>2 kategori (Film & Brand)</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>2 platform (Instagram & TikTok)</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start;color:var(--muted)"><span style="flex-shrink:0">✗</span><span>Export PDF & Print</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start;color:var(--muted)"><span style="flex-shrink:0">✗</span><span>Save History</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start;color:var(--muted)"><span style="flex-shrink:0">✗</span><span>Semua kategori & platform</span></div>
+        </div>
+        <button onclick="hidePricingPage()" style="width:100%;padding:12px;border-radius:99px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--muted);font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer">Pakai Gratis</button>
+      </div>
+
+      <!-- PRO MONTHLY -->
+      <div style="background:var(--surface);border:2px solid var(--primary);border-radius:24px;padding:2rem;position:relative;box-shadow:var(--shadow-lg)">
+        <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--primary);color:var(--surface);font-size:0.72rem;font-weight:700;padding:4px 16px;border-radius:99px;white-space:nowrap">⭐ PALING POPULER</div>
+        <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--primary);margin-bottom:8px">Pro Monthly</div>
+        <div style="font-family:'Sora',sans-serif;font-size:2.2rem;font-weight:800;color:var(--text);margin-bottom:4px">Rp 49.000</div>
+        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:1.5rem">per bulan</div>
+        <div style="height:1px;background:var(--border);margin-bottom:1.5rem"></div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:2rem;font-size:0.85rem">
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span><strong>10x generate per sesi (3 jam)</strong></span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Durasi hingga 8 minggu</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span><strong>Semua 10 kategori</strong></span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Semua 4 platform</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Semua pilihan budget</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span><strong>Export PDF & Print</strong></span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span><strong>Save History 6 campaign</strong></span></div>
+        </div>
+        <a href="https://wa.me/6281234567890?text=Halo%2C+saya+mau+berlangganan+CampaignPlanner+Pro+Monthly+Rp+49.000%2Fbulan" target="_blank" style="display:block;width:100%;padding:13px;border-radius:99px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;text-align:center;text-decoration:none">Beli via WhatsApp →</a>
+      </div>
+
+      <!-- PRO ANNUAL -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:2rem">
+        <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Pro Annual</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
+          <div style="font-family:'Sora',sans-serif;font-size:2.2rem;font-weight:800;color:var(--text)">Rp 399.000</div>
+        </div>
+        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:4px">per tahun <span style="background:rgba(78,200,122,0.15);color:var(--primary);padding:2px 8px;border-radius:99px;font-size:0.72rem;font-weight:700">Hemat 32%</span></div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:1.5rem">~Rp 33.000/bulan</div>
+        <div style="height:1px;background:var(--border);margin-bottom:1.5rem"></div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:2rem;font-size:0.85rem">
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Semua fitur Pro Monthly</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span><strong>Hemat Rp 189.000/tahun</strong></span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Prioritas support</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Early access fitur baru</span></div>
+        </div>
+        <a href="https://wa.me/6281234567890?text=Halo%2C+saya+mau+berlangganan+CampaignPlanner+Pro+Annual+Rp+399.000%2Ftahun" target="_blank" style="display:block;width:100%;padding:13px;border-radius:99px;border:1.5px solid var(--primary);background:var(--primary-soft);color:var(--primary);font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;text-align:center;text-decoration:none">Beli via WhatsApp →</a>
+      </div>
+
+    </div>
+
+    <!-- Agency -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:2rem;display:flex;align-items:center;justify-content:space-between;gap:2rem;flex-wrap:wrap;margin-bottom:2rem">
+      <div>
+        <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px">Agency / Tim</div>
+        <div style="font-family:'Sora',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px">Rp 149.000<span style="font-size:1rem;font-weight:400;color:var(--muted)">/bulan</span></div>
+        <p style="font-size:0.82rem;color:var(--muted)">Semua fitur Pro · 5 seat · Cocok untuk tim marketing & agency</p>
+      </div>
+      <a href="https://wa.me/6281234567890?text=Halo%2C+saya+tertarik+paket+Agency+CampaignPlanner" target="_blank" style="padding:12px 24px;border-radius:99px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;white-space:nowrap">Hubungi Kami →</a>
+    </div>
+
+    <!-- FAQ -->
+    <div style="text-align:center;margin-bottom:2rem">
+      <h3 style="font-family:'Sora',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:1.5rem">FAQ</h3>
+      <div style="display:grid;gap:1rem;text-align:left;max-width:600px;margin:0 auto">
+        <div style="background:var(--surface);border-radius:12px;padding:1rem 1.25rem;border:1px solid var(--border)">
+          <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px">Bagaimana cara aktivasi key?</div>
+          <div style="font-size:0.82rem;color:var(--muted)">Setelah pembayaran, kamu akan mendapat license key via WhatsApp. Masukkan key di Settings → Aktifkan.</div>
+        </div>
+        <div style="background:var(--surface);border-radius:12px;padding:1rem 1.25rem;border:1px solid var(--border)">
+          <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px">Key berlaku di berapa perangkat?</div>
+          <div style="font-size:0.82rem;color:var(--muted)">1 key untuk 1 browser. Key tersimpan di browser kamu, tidak perlu login.</div>
+        </div>
+        <div style="background:var(--surface);border-radius:12px;padding:1rem 1.25rem;border:1px solid var(--border)">
+          <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px">Apa metode pembayaran yang tersedia?</div>
+          <div style="font-size:0.82rem;color:var(--muted)">Transfer bank (BCA, BRI, Mandiri), QRIS, GoPay, OVO, Dana. Konfirmasi via WhatsApp.</div>
+        </div>
+        <div style="background:var(--surface);border-radius:12px;padding:1rem 1.25rem;border:1px solid var(--border)">
+          <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px">Apakah ada refund?</div>
+          <div style="font-size:0.82rem;color:var(--muted)">Jika ada masalah teknis di pihak kami, kami akan proses refund dalam 3 hari kerja.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Key Section -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:2rem;text-align:center">
+      <div style="font-family:'Sora',sans-serif;font-size:1rem;font-weight:700;margin-bottom:8px">Sudah punya key?</div>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem">Masukkan license key kamu di bawah untuk aktivasi</p>
+      <div style="display:flex;gap:8px;max-width:380px;margin:0 auto">
+        <input type="text" id="pricingKeyInput" placeholder="CPP-XXXX-XXXX-XXXX" style="flex:1;background:var(--surface2);border:1.5px solid var(--border2);border-radius:12px;padding:11px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;text-transform:uppercase;letter-spacing:.04em"/>
+        <button onclick="activateKeyFromPricing()" style="padding:11px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer">Aktifkan</button>
+      </div>
+      <p id="pricingKeyMsg" style="font-size:0.78rem;margin-top:8px;display:none"></p>
+    </div>
+  </div>
+</div>
+
+</body></html>`;
 
   const win=window.open('','_blank');
   win.document.write(html);
@@ -1957,6 +2323,7 @@ function printPlan() {
 
 // ── EXPORT PDF ──
 function exportPDF() {
+  if (!isPremium()) { showUpgradePrompt('export PDF'); return; }
   if (!plan || !window.jspdf) { printPlan(); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'mm', format:'a4' });
@@ -2089,9 +2456,310 @@ document.addEventListener('DOMContentLoaded', () => {
   if (modal) modal.addEventListener('click', function(e) { if(e.target===this) hideHistory(); });
 
   updateNavHistBtn();
+  updateNavUI();
+  applyFreemiumUI();
+
+  // Settings modal close on backdrop click
+  const settingsModal = document.getElementById('settingsModal');
+  if (settingsModal) settingsModal.addEventListener('click', function(e) { if(e.target===this) hideSettings(); });
 });
 
 
+
+
+// ── SETTINGS & PRICING ──
+function showSettings() {
+  updateSettingsUI();
+  document.getElementById('settingsModal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+function hideSettings() {
+  document.getElementById('settingsModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+function showPricingPage() {
+  document.getElementById('pricingPage').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+function hidePricingPage() {
+  document.getElementById('pricingPage').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function updateSettingsUI() {
+  const premium = isPremium();
+  const key = localStorage.getItem(PREMIUM_KEY) || '';
+
+  // Plan status
+  const statusEl = document.getElementById('planStatus');
+  if (statusEl) {
+    if (premium) {
+      statusEl.style.background = 'var(--primary-soft)';
+      statusEl.style.borderColor = 'var(--primary-mid)';
+      statusEl.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:1.5rem">✨</span>
+          <div>
+            <div style="font-weight:700;color:var(--primary);font-size:0.9rem">Pro Plan Aktif</div>
+            <div style="font-size:0.75rem;color:var(--muted);margin-top:2px">Key: ${key.substring(0,8)}••••••••</div>
+          </div>
+        </div>`;
+    } else {
+      statusEl.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:1.5rem">🆓</span>
+            <div>
+              <div style="font-weight:700;font-size:0.9rem">Free Plan</div>
+              <div style="font-size:0.75rem;color:var(--muted);margin-top:2px">2x generate/hari · Fitur terbatas</div>
+            </div>
+          </div>
+          <button onclick="hideSettings();showPricingPage()" style="padding:7px 14px;border-radius:99px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer">Upgrade →</button>
+        </div>`;
+    }
+  }
+
+  // Usage stats
+  const usageEl = document.getElementById('usageStats');
+  if (usageEl) {
+    const storageKey = premium ? PRO_SESSION_KEY : FREE_USAGE_KEY;
+    const windowMs = premium ? PRO_WINDOW : FREE_WINDOW;
+    const limit = premium ? PRO_LIMIT : FREE_LIMIT;
+    const usage = getUsageData(storageKey, windowMs);
+    const remaining = Math.max(0, limit - usage.count);
+    const windowLabel = premium ? 'sesi (3 jam)' : 'hari ini';
+    usageEl.innerHTML = `
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px">Penggunaan</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="flex:1;background:var(--border2);border-radius:99px;height:6px;overflow:hidden">
+          <div style="height:100%;background:var(--primary);border-radius:99px;width:${Math.min(100,(usage.count/limit)*100)}%;transition:width 0.3s"></div>
+        </div>
+        <span style="font-size:0.82rem;font-weight:700;color:var(--primary);white-space:nowrap">${remaining}/${limit}</span>
+      </div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:6px">Tersisa ${remaining}x generate ${windowLabel}</div>`;
+  }
+
+  // Deactivate button
+  const deactivateEl = document.getElementById('deactivateSection');
+  if (deactivateEl) deactivateEl.style.display = premium ? 'block' : 'none';
+  
+  // Pre-fill key input if exists
+  const keyInput = document.getElementById('keyInput');
+  if (keyInput && key) keyInput.value = key;
+}
+
+function activateKey() {
+  const input = document.getElementById('keyInput');
+  const msg = document.getElementById('keyMsg');
+  const key = (input?.value || '').trim().toUpperCase();
+  
+  if (!validateKeyFormat(key)) {
+    if (msg) { msg.style.display='block'; msg.style.color='var(--red)'; msg.textContent='❌ Format key tidak valid. Contoh: CPP-XXXX-XXXX-XXXX'; }
+    return;
+  }
+  
+  localStorage.setItem(PREMIUM_KEY, key);
+  if (msg) { msg.style.display='block'; msg.style.color='var(--green)'; msg.textContent='✅ Key berhasil diaktifkan! Selamat datang di Pro.'; }
+  
+  // Update upgrade button
+  const upgradeBtn = document.getElementById('upgradeNavBtn');
+  if (upgradeBtn) { upgradeBtn.textContent = '✨ Pro'; upgradeBtn.style.background = 'var(--primary)'; }
+  
+  updateSettingsUI();
+  setTimeout(() => { hideSettings(); location.reload(); }, 1500);
+}
+
+function activateKeyFromPricing() {
+  const input = document.getElementById('pricingKeyInput');
+  const msg = document.getElementById('pricingKeyMsg');
+  const key = (input?.value || '').trim().toUpperCase();
+  
+  if (!validateKeyFormat(key)) {
+    if (msg) { msg.style.display='block'; msg.style.color='var(--red)'; msg.textContent='❌ Format key tidak valid. Contoh: CPP-XXXX-XXXX-XXXX'; }
+    return;
+  }
+  
+  localStorage.setItem(PREMIUM_KEY, key);
+  if (msg) { msg.style.display='block'; msg.style.color='var(--green)'; msg.textContent='✅ Key berhasil diaktifkan!'; }
+  setTimeout(() => { hidePricingPage(); location.reload(); }, 1500);
+}
+
+function deactivateKey() {
+  if (!confirm('Hapus license key? Kamu akan kembali ke Free Plan.')) return;
+  localStorage.removeItem(PREMIUM_KEY);
+  location.reload();
+}
+
+function updateNavUI() {
+  const premium = isPremium();
+  const upgradeBtn = document.getElementById('upgradeNavBtn');
+  if (upgradeBtn) {
+    if (premium) {
+      upgradeBtn.textContent = '✨ Pro';
+      upgradeBtn.onclick = showSettings;
+    } else {
+      upgradeBtn.textContent = '✨ Upgrade';
+      upgradeBtn.onclick = showPricingPage;
+    }
+  }
+}
 </script>
+
+<!-- SETTINGS MODAL -->
+<div id="settingsModal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);overflow-y:auto;padding:2rem 1rem">
+  <div style="max-width:480px;margin:0 auto;background:var(--surface);border-radius:24px;padding:2rem;box-shadow:var(--shadow-lg)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-family:'Sora',sans-serif;font-size:1.15rem;font-weight:700;color:var(--primary)">⚙️ Settings</div>
+        <p style="font-size:0.78rem;color:var(--muted);margin-top:2px">Kelola akun dan lisensi kamu</p>
+      </div>
+      <button onclick="hideSettings()" style="background:var(--surface2);border:1px solid var(--border2);border-radius:99px;padding:7px 16px;font-size:0.82rem;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif">✕</button>
+    </div>
+
+    <!-- Current Status -->
+    <div id="planStatus" style="margin-bottom:1.5rem;padding:1rem;border-radius:12px;border:1px solid var(--border)">
+      <!-- Filled by JS -->
+    </div>
+
+    <!-- Key Input -->
+    <div style="margin-bottom:1.5rem">
+      <label style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:block;margin-bottom:8px">Masukkan License Key</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="keyInput" placeholder="CPP-XXXX-XXXX-XXXX" style="flex:1;background:var(--surface2);border:1.5px solid var(--border2);border-radius:12px;padding:11px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.9rem;text-transform:uppercase;letter-spacing:.05em"/>
+        <button onclick="activateKey()" style="padding:11px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer;white-space:nowrap">Aktifkan</button>
+      </div>
+      <p id="keyMsg" style="font-size:0.78rem;margin-top:6px;display:none"></p>
+      <p style="font-size:0.72rem;color:var(--muted);margin-top:6px">Sudah punya key? Masukkan di atas. Belum punya? <button onclick="hideSettings();showPricingPage()" style="background:none;border:none;color:var(--primary);font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.72rem">Beli sekarang →</button></p>
+    </div>
+
+    <!-- Usage Stats -->
+    <div id="usageStats" style="background:var(--surface2);border-radius:12px;padding:1rem;margin-bottom:1.5rem;border:1px solid var(--border)">
+      <!-- Filled by JS -->
+    </div>
+
+    <!-- Deactivate -->
+    <div id="deactivateSection" style="display:none">
+      <button onclick="deactivateKey()" style="width:100%;padding:10px;border-radius:99px;border:1.5px solid rgba(186,26,26,0.3);background:rgba(186,26,26,0.06);color:var(--red);font-family:'Inter',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer">🗑 Hapus License Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRICING PAGE -->
+<div id="pricingPage" style="display:none;position:fixed;inset:0;z-index:200;background:var(--bg);overflow-y:auto">
+  <div style="max-width:860px;margin:0 auto;padding:5rem 1.5rem">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:3rem">
+      <button onclick="hidePricingPage()" style="position:fixed;top:1rem;right:1.5rem;background:var(--surface2);border:1px solid var(--border2);border-radius:99px;padding:8px 18px;font-size:0.82rem;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;z-index:10">✕ Tutup</button>
+      <div style="font-size:0.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--primary);margin-bottom:8px">Pricing</div>
+      <h2 style="font-family:'Sora',sans-serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;letter-spacing:-0.03em;margin-bottom:1rem">Pilih paket yang sesuai</h2>
+      <p style="font-size:1rem;color:var(--muted);max-width:460px;margin:0 auto;line-height:1.7">Mulai gratis, upgrade kapan saja. Tidak perlu kartu kredit.</p>
+    </div>
+
+    <!-- Plans Grid -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;margin-bottom:3rem">
+      
+      <!-- FREE -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:2rem">
+        <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Free</div>
+        <div style="font-family:'Sora',sans-serif;font-size:2.2rem;font-weight:800;color:var(--text);margin-bottom:4px">Rp 0</div>
+        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:1.5rem">Selamanya gratis</div>
+        <div style="height:1px;background:var(--border);margin-bottom:1.5rem"></div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:2rem;font-size:0.85rem">
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>2x generate per hari</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Durasi max 1 minggu</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>2 kategori (Film & Brand)</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>2 platform (Instagram & TikTok)</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start;color:var(--muted)"><span style="flex-shrink:0">✗</span><span>Export PDF & Print</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start;color:var(--muted)"><span style="flex-shrink:0">✗</span><span>Save History</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start;color:var(--muted)"><span style="flex-shrink:0">✗</span><span>Semua kategori & platform</span></div>
+        </div>
+        <button onclick="hidePricingPage()" style="width:100%;padding:12px;border-radius:99px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--muted);font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer">Pakai Gratis</button>
+      </div>
+
+      <!-- PRO MONTHLY -->
+      <div style="background:var(--surface);border:2px solid var(--primary);border-radius:24px;padding:2rem;position:relative;box-shadow:var(--shadow-lg)">
+        <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--primary);color:var(--surface);font-size:0.72rem;font-weight:700;padding:4px 16px;border-radius:99px;white-space:nowrap">⭐ PALING POPULER</div>
+        <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--primary);margin-bottom:8px">Pro Monthly</div>
+        <div style="font-family:'Sora',sans-serif;font-size:2.2rem;font-weight:800;color:var(--text);margin-bottom:4px">Rp 49.000</div>
+        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:1.5rem">per bulan</div>
+        <div style="height:1px;background:var(--border);margin-bottom:1.5rem"></div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:2rem;font-size:0.85rem">
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span><strong>10x generate per sesi (3 jam)</strong></span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Durasi hingga 8 minggu</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span><strong>Semua 10 kategori</strong></span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Semua 4 platform</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Semua pilihan budget</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span><strong>Export PDF & Print</strong></span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span><strong>Save History 6 campaign</strong></span></div>
+        </div>
+        <a href="https://wa.me/6281234567890?text=Halo%2C+saya+mau+berlangganan+CampaignPlanner+Pro+Monthly+Rp+49.000%2Fbulan" target="_blank" style="display:block;width:100%;padding:13px;border-radius:99px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;text-align:center;text-decoration:none">Beli via WhatsApp →</a>
+      </div>
+
+      <!-- PRO ANNUAL -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:2rem">
+        <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Pro Annual</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
+          <div style="font-family:'Sora',sans-serif;font-size:2.2rem;font-weight:800;color:var(--text)">Rp 399.000</div>
+        </div>
+        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:4px">per tahun <span style="background:rgba(78,200,122,0.15);color:var(--primary);padding:2px 8px;border-radius:99px;font-size:0.72rem;font-weight:700">Hemat 32%</span></div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:1.5rem">~Rp 33.000/bulan</div>
+        <div style="height:1px;background:var(--border);margin-bottom:1.5rem"></div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:2rem;font-size:0.85rem">
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Semua fitur Pro Monthly</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span><strong>Hemat Rp 189.000/tahun</strong></span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Prioritas support</span></div>
+          <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--primary);font-weight:700;flex-shrink:0">✓</span><span>Early access fitur baru</span></div>
+        </div>
+        <a href="https://wa.me/6281234567890?text=Halo%2C+saya+mau+berlangganan+CampaignPlanner+Pro+Annual+Rp+399.000%2Ftahun" target="_blank" style="display:block;width:100%;padding:13px;border-radius:99px;border:1.5px solid var(--primary);background:var(--primary-soft);color:var(--primary);font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;text-align:center;text-decoration:none">Beli via WhatsApp →</a>
+      </div>
+
+    </div>
+
+    <!-- Agency -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:2rem;display:flex;align-items:center;justify-content:space-between;gap:2rem;flex-wrap:wrap;margin-bottom:2rem">
+      <div>
+        <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px">Agency / Tim</div>
+        <div style="font-family:'Sora',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px">Rp 149.000<span style="font-size:1rem;font-weight:400;color:var(--muted)">/bulan</span></div>
+        <p style="font-size:0.82rem;color:var(--muted)">Semua fitur Pro · 5 seat · Cocok untuk tim marketing & agency</p>
+      </div>
+      <a href="https://wa.me/6281234567890?text=Halo%2C+saya+tertarik+paket+Agency+CampaignPlanner" target="_blank" style="padding:12px 24px;border-radius:99px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;white-space:nowrap">Hubungi Kami →</a>
+    </div>
+
+    <!-- FAQ -->
+    <div style="text-align:center;margin-bottom:2rem">
+      <h3 style="font-family:'Sora',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:1.5rem">FAQ</h3>
+      <div style="display:grid;gap:1rem;text-align:left;max-width:600px;margin:0 auto">
+        <div style="background:var(--surface);border-radius:12px;padding:1rem 1.25rem;border:1px solid var(--border)">
+          <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px">Bagaimana cara aktivasi key?</div>
+          <div style="font-size:0.82rem;color:var(--muted)">Setelah pembayaran, kamu akan mendapat license key via WhatsApp. Masukkan key di Settings → Aktifkan.</div>
+        </div>
+        <div style="background:var(--surface);border-radius:12px;padding:1rem 1.25rem;border:1px solid var(--border)">
+          <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px">Key berlaku di berapa perangkat?</div>
+          <div style="font-size:0.82rem;color:var(--muted)">1 key untuk 1 browser. Key tersimpan di browser kamu, tidak perlu login.</div>
+        </div>
+        <div style="background:var(--surface);border-radius:12px;padding:1rem 1.25rem;border:1px solid var(--border)">
+          <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px">Apa metode pembayaran yang tersedia?</div>
+          <div style="font-size:0.82rem;color:var(--muted)">Transfer bank (BCA, BRI, Mandiri), QRIS, GoPay, OVO, Dana. Konfirmasi via WhatsApp.</div>
+        </div>
+        <div style="background:var(--surface);border-radius:12px;padding:1rem 1.25rem;border:1px solid var(--border)">
+          <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px">Apakah ada refund?</div>
+          <div style="font-size:0.82rem;color:var(--muted)">Jika ada masalah teknis di pihak kami, kami akan proses refund dalam 3 hari kerja.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Key Section -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:2rem;text-align:center">
+      <div style="font-family:'Sora',sans-serif;font-size:1rem;font-weight:700;margin-bottom:8px">Sudah punya key?</div>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem">Masukkan license key kamu di bawah untuk aktivasi</p>
+      <div style="display:flex;gap:8px;max-width:380px;margin:0 auto">
+        <input type="text" id="pricingKeyInput" placeholder="CPP-XXXX-XXXX-XXXX" style="flex:1;background:var(--surface2);border:1.5px solid var(--border2);border-radius:12px;padding:11px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;text-transform:uppercase;letter-spacing:.04em"/>
+        <button onclick="activateKeyFromPricing()" style="padding:11px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--surface);font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer">Aktifkan</button>
+      </div>
+      <p id="pricingKeyMsg" style="font-size:0.78rem;margin-top:8px;display:none"></p>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
