@@ -1360,10 +1360,35 @@ function renderForm(cat) {
       <label>${cat.descField} <span style="color:var(--red)">*</span></label>
       <textarea id="mainDesc" placeholder="${cat.descPlaceholder}"></textarea>
     </div>
+    <!-- Campaign Mode Toggle -->
     <div class="fg">
-      <label>${cat.dateField} <span style="color:var(--red)">*</span></label>
+      <label>Mode Kampanye</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button type="button" class="rtype-btn active" id="modeEvent" onclick="setCampaignMode('event')">
+          <span class="rt-icon">🎯</span>
+          <span class="rt-name">Ada Event / Launch</span>
+          <span class="rt-hint">Ada tanggal tayang, rilis, atau event spesifik</span>
+        </button>
+        <button type="button" class="rtype-btn" id="modeOngoing" onclick="setCampaignMode('ongoing')">
+          <span class="rt-icon">📅</span>
+          <span class="rt-name">Ongoing / Harian</span>
+          <span class="rt-hint">Content calendar rutin tanpa event spesifik</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Date Field (hidden when ongoing) -->
+    <div class="fg" id="dateFieldWrapper">
+      <label id="dateLabelText">${cat.dateField} <span style="color:var(--red)">*</span></label>
       <input type="date" id="mainDate"/>
     </div>
+
+    <!-- Start Date for Ongoing -->
+    <div class="fg" id="startDateWrapper" style="display:none">
+      <label>Mulai Dari <span class="opt">(opsional — default hari ini)</span></label>
+      <input type="date" id="startDate"/>
+    </div>
+
     ${extraHtml}
 
     <div class="form-section-title">🎯 Tipe & Distribusi</div>
@@ -1488,6 +1513,8 @@ function changeCategory() {
   document.getElementById('resultsSection').style.display = 'none';
   document.getElementById('resultsSection').innerHTML = '';
   plan = null;
+  campaignMode = 'event'; // reset mode
+  contentPillars = [];
   document.getElementById('categories').scrollIntoView({ behavior:'smooth' });
 }
 
@@ -1659,11 +1686,14 @@ async function generate() {
 
   const name  = document.getElementById('mainName')?.value.trim();
   const desc  = document.getElementById('mainDesc')?.value.trim();
-  const date  = document.getElementById('mainDate')?.value;
+  const date  = campaignMode === 'ongoing' 
+    ? (document.getElementById('startDate')?.value || new Date().toISOString().split('T')[0])
+    : document.getElementById('mainDate')?.value;
   const notes = document.getElementById('extraNotes')?.value.trim() || '';
   const err   = document.getElementById('errMsg');
 
-  if (!name || !desc || !date) { if(err) err.style.display='block'; return; }
+  if (!name || !desc) { if(err) err.style.display='block'; return; }
+  if (campaignMode === 'event' && !date) { if(err){ err.textContent='Harap isi tanggal event/launch'; err.style.display='block'; } return; }
   if (err) err.style.display='none';
 
   // Collect extra fields
@@ -1691,7 +1721,12 @@ async function generate() {
   if (!platformList.length) platformList.push('Instagram','TikTok');
 
   const relFmt = new Date(date+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
-  meta = { title:name, category:selectedCat, catName:cat.name, catIcon:cat.icon, genre:extraData.movieGenre||extraData.musicGenre||extraData.brandCategory||extraData.foodType||extraData.eventType||extraData.causeType||'', releaseFormatted:relFmt, cast:extraData.movieCast||extraData.artistName||'', notes };
+  const isOngoing = campaignMode === 'ongoing';
+  meta = { title:name, category:selectedCat, catName:cat.name, catIcon:cat.icon, 
+    genre:extraData.movieGenre||extraData.musicGenre||extraData.brandCategory||extraData.foodType||extraData.eventType||extraData.causeType||'', 
+    releaseFormatted: isOngoing ? 'Ongoing' : relFmt, 
+    cast:extraData.movieCast||extraData.artistName||'', 
+    notes, isOngoing };
 
   document.getElementById('formSection').style.display = 'none';
   const loading = document.getElementById('loadingSection');
@@ -1756,6 +1791,12 @@ async function generate() {
   const aw=Math.round(durDays*0.35), ex=Math.round(durDays*0.65), pl=Math.round(durDays*0.85);
 
   function getDateLabel(d) {
+    if (isOngoing) {
+      const start = new Date(date+'T00:00:00');
+      const actual = new Date(start);
+      actual.setDate(start.getDate() + d - 1);
+      return actual.toLocaleDateString('id-ID',{day:'numeric',month:'short'});
+    }
     if (timing==='before') return 'H-'+(beforeDays-d+1);
     if (timing==='after') return 'H+'+d;
     if (d<=beforeDays) return 'H-'+(beforeDays-d+1);
@@ -1764,6 +1805,12 @@ async function generate() {
   }
 
   function getPhase(d) {
+    if (isOngoing) {
+      const weekNum = Math.ceil(d / 7);
+      const phases = phData?.phases || [];
+      const phase = phases[weekNum-1] || phases[phases.length-1] || {};
+      return phase.name || ('Minggu '+weekNum);
+    }
     if (timing==='after') {
       if (d<=Math.round(afterDays*0.3)) return 'Launch';
       if (d<=Math.round(afterDays*0.6)) return 'Post-Launch';
@@ -1791,21 +1838,28 @@ async function generate() {
 
   try {
     // CALL 1: Phases
-    const rPhase = await callAPI(
-      'Kamu adalah content strategist profesional.\n'
-      +masterCtx+'\n'
-      +'Campaign: '+mainInfo+'. Deskripsi: '+shortDesc+'.\n'
-      +'Durasi: '+dur+' minggu ('+durDays+' hari).\n'
-      +'TIMING: '+(timing==='before'?'Semua hari SEBELUM tanggal utama':timing==='after'?'Semua hari SESUDAH':beforeDays+' hari pre + '+afterDays+' hari post')+'.\n'
-      +'Jawab HANYA JSON ini:\n'
-      +'{"overview":{"totalPosts":'+(durDays*2)+',"platforms":'+JSON.stringify(platformList)+',"phases":4,"targetAudience":"[5 kata]"},'
-      +'"phases":[{"name":"Awareness","period":"H1-H'+aw+'","goal":"[6 kata]","type":"1"},'
-      +'{"name":"Excitement","period":"H'+(aw+1)+'-H'+ex+'","goal":"[6 kata]","type":"2"},'
-      +'{"name":"Pre-Launch","period":"H'+(ex+1)+'-H'+pl+'","goal":"[6 kata]","type":"3"},'
-      +'{"name":"Launch","period":"H'+(pl+1)+'-H'+durDays+'","goal":"[6 kata]","type":"4"}]}\n'
-      +'Sesuaikan nama fase dengan konteks '+cat.name+'. JSON only.',
-      'Menyusun fase...'
-    );
+    const weekThemes = Array.from({length:dur},(_,i)=>
+      `{"name":"Minggu ${i+1}","period":"H${i*7+1}-H${Math.min((i+1)*7,durDays)}","goal":"[tema minggu ini 6 kata]","type":"${(i%5)+1}"}`
+    ).join(',');
+
+    const phasePrompt = isOngoing
+      ? 'Content strategist profesional.\n'
+        +masterCtx+'\n'
+        +'Brand: '+mainInfo+'. '+shortDesc+'.\n'
+        +'ONGOING content calendar '+dur+' minggu — TIDAK ada event/launch spesifik.\n'
+        +'Buat nama tema mingguan kreatif dan relevan untuk '+cat.name+'.\n'
+        +'JSON: {"overview":{"totalPosts":'+(durDays*2)+',"platforms":'+JSON.stringify(platformList)+',"phases":'+dur+',"targetAudience":"[5 kata]"},"phases":['+weekThemes+']} JSON only.'
+      : 'Content strategist profesional.\n'
+        +masterCtx+'\n'
+        +'Campaign: '+mainInfo+'. '+shortDesc+'.\n'
+        +'Durasi: '+dur+' minggu ('+durDays+' hari). TIMING: '+(timing==='before'?'Before':timing==='after'?'After':'Both')+'.\n'
+        +'JSON: {"overview":{"totalPosts":'+(durDays*2)+',"platforms":'+JSON.stringify(platformList)+',"phases":4,"targetAudience":"[5 kata]"},"phases":['
+        +'{"name":"Awareness","period":"H1-H'+aw+'","goal":"[6 kata]","type":"1"},'
+        +'{"name":"Excitement","period":"H'+(aw+1)+'-H'+ex+'","goal":"[6 kata]","type":"2"},'
+        +'{"name":"Pre-Launch","period":"H'+(ex+1)+'-H'+pl+'","goal":"[6 kata]","type":"3"},'
+        +'{"name":"Launch","period":"H'+(pl+1)+'-H'+durDays+'","goal":"[6 kata]","type":"4"}]} Sesuaikan nama fase. JSON only.';
+
+    const rPhase = await callAPI(phasePrompt, 'Menyusun fase...');
     setProgress(20,'Fase selesai...');
     const phData = safeJSON(rPhase);
 
@@ -1818,8 +1872,12 @@ async function generate() {
       const pct=20+Math.round((c/totalChunks)*55);
       setProgress(pct,'Jadwal H'+d1+'–H'+d2+'...');
       const exPhase=getPhase(d1);
+      const ongoingNote = isOngoing 
+        ? 'INI ADALAH ONGOING CONTENT CALENDAR — tidak ada event/launch. Fokus ke konten yang membangun audience, engagement, dan brand awareness secara konsisten. Variasikan jenis konten setiap hari. Gunakan content pillar sebagai panduan.\n'
+        : '';
       const calPrompt = 'Content planner untuk '+cat.name+': '+mainInfo+'. '+shortDesc+'.\n'
         +masterCtx+'\n'
+        +ongoingNote
         +'HANYA gunakan platform: '+platformList.join(', ')+'. Jangan pakai platform lain.\n'
         +'Buat jadwal H'+d1+' sampai H'+d2+'. Tiap hari 2 konten beda platform.\n'
         +'Treatment harus actionable & spesifik untuk '+cat.name+' — jelaskan APA yang dibuat, BAGAIMANA eksekusinya, dan TUJUANNYA.\n'
@@ -3332,6 +3390,41 @@ function getAssetsContext() {
     + `WAJIB: Prioritaskan penggunaan aset ini dalam konten. `
     + `Jangan recommend konten yang butuh aset di luar list ini. `
     + `Distribute penggunaan aset secara strategis — jangan pakai aset yang sama terus-menerus.`;
+}
+
+
+// ── CAMPAIGN MODE (Event vs Ongoing) ──
+let campaignMode = 'event'; // 'event' or 'ongoing'
+
+function setCampaignMode(mode) {
+  campaignMode = mode;
+  
+  const modeEvent = document.getElementById('modeEvent');
+  const modeOngoing = document.getElementById('modeOngoing');
+  const dateWrapper = document.getElementById('dateFieldWrapper');
+  const startWrapper = document.getElementById('startDateWrapper');
+  const timingSection = document.querySelector('.timing-group')?.closest('.fg');
+  const timingTitle = timingSection?.previousElementSibling;
+
+  if (mode === 'ongoing') {
+    modeEvent?.classList.remove('active');
+    modeOngoing?.classList.add('active');
+    if (dateWrapper) dateWrapper.style.display = 'none';
+    if (startWrapper) startWrapper.style.display = 'block';
+    // Hide timing section - not relevant for ongoing
+    if (timingSection) timingSection.style.display = 'none';
+    if (timingTitle) timingTitle.style.display = 'none';
+    timing = 'ongoing';
+  } else {
+    modeEvent?.classList.add('active');
+    modeOngoing?.classList.remove('active');
+    if (dateWrapper) dateWrapper.style.display = 'block';
+    if (startWrapper) startWrapper.style.display = 'none';
+    if (timingSection) timingSection.style.display = 'block';
+    if (timingTitle) timingTitle.style.display = 'flex';
+    timing = 'before';
+    updateTimingUI();
+  }
 }
 </script>
 
