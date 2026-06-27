@@ -1279,6 +1279,7 @@ function selectCategory(card) {
 function startWithCategory() {
   if (!selectedCat) return;
   contentPillars = []; // reset pillars
+  document.getElementById('formSection').style.display = 'block';
   showPillarModal();
   document.getElementById('app').scrollIntoView({ behavior:'smooth' });
 }
@@ -2867,7 +2868,9 @@ function hidePillarModal() {
 function skipPillar() {
   contentPillars = [];
   hidePillarModal();
+  document.getElementById('formSection').style.display = 'block';
   renderForm(CATEGORIES[selectedCat]);
+  setTimeout(() => document.getElementById('app').scrollIntoView({ behavior:'smooth' }), 100);
 }
 
 function savePillar() {
@@ -2881,7 +2884,9 @@ function savePillar() {
     if (name) contentPillars.push({ icon, name, desc, ratio: Math.round(100/cards.length), colorIdx: i });
   });
   hidePillarModal();
+  document.getElementById('formSection').style.display = 'block';
   renderForm(CATEGORIES[selectedCat]);
+  setTimeout(() => document.getElementById('app').scrollIntoView({ behavior:'smooth' }), 100);
 }
 
 function addPillarCard(pillar = null) {
